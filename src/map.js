@@ -1,3 +1,4 @@
+import { CHALLENGES } from "./challenges.js";
 import { MISSIONS } from "./missions.js";
 export const TILE = Object.freeze({
   FLOOR: ".",
@@ -10,7 +11,7 @@ export const TILE = Object.freeze({
 export function createMap(index = 0) {
   if (!Number.isInteger(index) || !MISSIONS[index])
     throw new RangeError("Misión inválida");
-  const mission = MISSIONS[index],
+  const mission = { ...MISSIONS[index], ...CHALLENGES[index] },
     width = 18,
     height = 14;
   const cells = Array.from({ length: height }, (_, y) =>
@@ -22,7 +23,7 @@ export function createMap(index = 0) {
   );
   for (const [type, positions] of [
     [TILE.WATER, mission.water],
-    [TILE.BRIDGE, mission.bridges],
+    [TILE.BRIDGE, [...mission.bridges, ...(mission.extraBridges ?? [])]],
     [TILE.WALL, mission.walls],
   ])
     for (const [x, y] of positions) cells[y][x] = type;

@@ -13,6 +13,7 @@ export const input = new Input(
   () => {
     if (game.state === GameState.PLAYING) ui.pause();
   },
+  () => game.state === GameState.PLAYING,
 );
 export const audio = new Soundtrack();
 export const ui = new UI(game, input, audio);
@@ -27,7 +28,7 @@ function frame(now) {
   previous = now;
   game.update(dt, input.read());
   const events = game.events.splice(0);
-  audio.sync(game.state, game.missionIndex);
+  audio.sync(game.state, game.missionIndex, game.alarm);
   audio.consume(events);
   renderer.consume(events);
   renderer.draw(game, dt);

@@ -125,10 +125,11 @@ export class Soundtrack {
       );
     }
   }
-  sync(state, mission) {
+  sync(state, mission, alarm = false) {
     const changed = mission !== this.mission || state !== this.state;
     this.state = state;
     this.mission = mission;
+    this.alarm = alarm;
     if (!this.context || !changed) return;
     this.step = 0;
     this.nextNote = this.context.currentTime + 0.15;
@@ -180,7 +181,7 @@ export class Soundtrack {
     )
       return;
     const c = this.context,
-      beat = 60 / (88 + this.mission * 4),
+      beat = 60 / (88 + this.mission * 4 + (this.alarm ? 12 : 0)),
       period = beat / 2;
     if (this.nextNote < c.currentTime) this.nextNote = c.currentTime + 0.03;
     while (this.nextNote < c.currentTime + 0.25) {
@@ -223,6 +224,32 @@ export class Soundtrack {
       let notes,
         duration = 0.15;
       switch (event.type) {
+        case "rune":
+          notes = [74, 81, 86, 93];
+          duration = 0.26;
+          break;
+        case "relic":
+          notes = [86, 93];
+          duration = 0.18;
+          break;
+        case "dash":
+          notes = [62, 81];
+          duration = 0.07;
+          break;
+        case "trap":
+          notes = [65, 62];
+          duration = 0.12;
+          break;
+        case "impact":
+          notes = [43, 50];
+          duration = 0.1;
+          break;
+        case "warning":
+          if (c.currentTime - this.lastAlert < 0.7) continue;
+          this.lastAlert = c.currentTime;
+          notes = [58, 65];
+          duration = 0.12;
+          break;
         case "leaves":
           notes = [91, 86];
           duration = 0.045;

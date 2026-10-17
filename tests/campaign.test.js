@@ -126,7 +126,8 @@ for (const mode of [1, 2])
         result.state,
         index === 4 ? GameState.VICTORY : GameState.MISSION_COMPLETE,
       );
-      assert.ok(result.flags > 0 && result.captures > 0 && result.rescues > 0);
+      assert.ok(result.flags > 0);
+      assert.equal(result.runes, game.runes.length);
       assert.ok(result.attempts > 0);
       if (index < 4) assert.equal(game.nextMission(), true);
     }

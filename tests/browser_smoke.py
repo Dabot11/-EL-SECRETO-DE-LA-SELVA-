@@ -64,7 +64,28 @@ with sync_playwright() as playwright:
     check("La pausa detiene el movimiento", page.evaluate("JSON.stringify(app.game.players)") == frozen)
     page.locator("#state-primary").click()
     check("Continuar reanuda el juego", page.evaluate("app.game.state === 'PLAYING'"))
+    page.locator('#pause').focus()
+    page.keyboard.press('Space')
+    check("Espacio activa un botón enfocado sin gastar impulso",page.evaluate("app.game.state==='PAUSED' && app.game.stats.dashes===0"))
+    page.locator('#state-primary').click()
     page.screenshot(path=str(OUTPUT / "game.png"), full_page=True)
+
+    page.evaluate("() => {app.game.start(2);app.game.guards=[];app.input.clear();}")
+    page.locator('#game-canvas').focus()
+    page.keyboard.down('d')
+    page.keyboard.down('Space')
+    page.wait_for_timeout(140)
+    check("Impulso azul con Espacio y movimiento",page.evaluate("app.game.stats.dashes===1 && app.game.players[0].dashCooldown>3"))
+    page.wait_for_timeout(3600)
+    check("Mantener Espacio no dispara impulsos repetidos",page.evaluate("app.game.stats.dashes===1"))
+    page.keyboard.up('Space')
+    page.keyboard.up('d')
+    page.keyboard.down('ArrowRight')
+    page.keyboard.press('ShiftRight')
+    page.wait_for_timeout(80)
+    page.keyboard.up('ArrowRight')
+    check("Impulso rojo independiente con Shift derecho",page.evaluate("app.game.stats.dashes===2 && app.game.players[1].dashCooldown>0"))
+    check("HUD muestra runas, tesoros y recarga", 'RUNAS 0/1' in page.locator('#rune-count').inner_text() and 'TESOROS' in page.locator('#relic-count').inner_text() and 'RECARGA' in page.locator('#dash-two').inner_text())
 
     # Deterministic interaction fixtures exercise the rendered game and HUD.
     page.evaluate("""() => {
@@ -73,13 +94,13 @@ with sync_playwright() as playwright:
     }""")
     check("Escondite sin tecla de interacción", page.evaluate("app.game.players[0].state === 'HIDDEN'") and "OCULTO" in page.locator("#player-one-status").inner_text())
     page.evaluate("""() => {
-      const g=app.game;
+      const g=app.game;g.runes.forEach(r=>r.active=true);
       Object.assign(g.players[0],{x:14.5,y:2.5,protection:0,state:'NORMAL'});g.collectFlag();g.capture(g.players[0]);app.ui.update();
     }""")
     check("Captura, burbuja y bandera caída", page.evaluate("app.game.players[0].state === 'CAPTURED' && app.game.flag.state === 'DROPPED'") and "caída" in page.locator("#objective").inner_text())
     page.screenshot(path=str(OUTPUT / "capture.png"), full_page=True)
     page.evaluate("""() => {
-      const g=app.game;Object.assign(g.players[1],{x:14.5,y:2.5,protection:0});g.update(.01);app.ui.update();
+      const g=app.game;Object.assign(g.players[1],{x:14.5,y:2.5,protection:0});g.update(.01);g.rescue(.6);app.ui.update();
     }""")
     check("Rescate y recuperación de bandera automáticos", page.evaluate("app.game.players[0].state === 'PROTECTED' && app.game.flag.carrier === 1 && app.game.attempts === 3"))
 
@@ -101,8 +122,9 @@ with sync_playwright() as playwright:
     page.locator("#play-solo").click()
     check("Selección de modo individual", page.evaluate("app.game.mode === 1 && app.game.state === 'PLAYING'"))
 
-    check("Arte pixelado cargado", page.evaluate("async()=> (await import('/src/sprites.js')).atlasReady && app.renderer.keyArtReady"))
+    check("Arte pixelado cargado", page.evaluate("async()=> (await import('/src/sprites.js')).atlasReady && (await import('/src/sprites.js')).guardiansReady && app.renderer.keyArtReady"))
     check("Cinco destinos visibles", page.locator("#mission-route li").count() == 5)
+    check("Solo la primera misión está disponible antes de avanzar",page.evaluate("app.game.progress.unlocked(1,0) && !app.game.progress.unlocked(1,1)"))
     journeys = []
     for mode in [1, 2]:
         if mode == 2:
@@ -111,15 +133,17 @@ with sync_playwright() as playwright:
         for mission in range(5):
             page.wait_for_timeout(100)
             page.screenshot(path=str(OUTPUT / f"mission-{mission+1}-mode-{mode}.png"), full_page=True)
+            # Fresh normal start keeps simulation timing independent of screenshot duration.
             result = page.evaluate("""async args => {
               const {playJourney}=await import('/tests/journey.js');
-              const result=playJourney(app.game,args.mode,args.mission,true);app.ui.update();return result;
+              const result=playJourney(app.game,args.mode,args.mission,false);app.ui.update();return result;
             }""", {"mode":mode,"mission":mission})
             journeys.append(result)
             expected = "VICTORY" if mission == 4 else "MISSION_COMPLETE"
-            check(f"Mapa {mission+1}, modo {mode}: bandera y regreso con guardianes activos", result["state"] == expected and result["captures"] > 0 and result["rescues"] > 0 and result["missionIndex"] == mission)
+            check(f"Mapa {mission+1}, modo {mode}: bandera y regreso con guardianes activos", result["state"] == expected and result["runes"] == [1,2,2,3,3][mission] and result["missionIndex"] == mission)
             title="¡AVENTURA COMPLETADA!" if mission == 4 else "¡MISIÓN COMPLETADA!"
             check(f"Resultado de misión {mission+1}, modo {mode}", page.locator("#state-title").inner_text() == title)
+            check(f"Estrellas y estadísticas visibles, misión {mission+1}, modo {mode}",page.locator('#result-stats').is_visible() and page.locator('.result-stars').get_attribute('aria-label').endswith('de 3 estrellas'))
             if mission < 4:
                 page.locator("#state-primary").click()
                 check(f"Avance al mapa {mission+2} sin perder el modo {mode}", page.evaluate(f"app.game.missionIndex === {mission+1} && app.game.mode === {mode} && app.game.attempts === 3 && app.game.state === 'PLAYING'"))
@@ -140,6 +164,18 @@ with sync_playwright() as playwright:
     page.locator("#state-primary").click()
     check("Reintentar la misión 4 conserva ese mapa, el modo y restaura tres intentos", page.evaluate("app.game.missionIndex === 3 && app.game.mode === 2 && app.game.attempts === 3 && app.game.guards.length === 5"))
 
+    # Saved checkpoints and replay selection survive a real reload.
+    page.reload(wait_until='networkidle')
+    page.evaluate("async()=>window.app=await import('/src/main.js')")
+    check("Continuar aparece tras recargar una misión pendiente",page.locator('#continue-game').is_visible() and 'misión 4' in page.locator('#continue-game').inner_text())
+    page.locator('#continue-game').click()
+    check("Continuar recupera mapa y modalidad",page.evaluate("app.game.mode===2 && app.game.missionIndex===3 && app.game.attempts===3"))
+    page.keyboard.press('Escape')
+    page.locator('#state-menu').click()
+    page.locator('#route-mode').select_option('1')
+    page.locator('button[data-mission="2"]').click()
+    check("Rejugar un mapa desbloqueado respeta la modalidad elegida",page.evaluate("app.game.mode===1 && app.game.missionIndex===2"))
+
     # Verify actual output samples, not just the existence of an AudioContext.
     page.evaluate("""() => {
       window.analyser=app.audio.context.createAnalyser();analyser.fftSize=2048;app.audio.master.connect(analyser);
@@ -149,6 +185,7 @@ with sync_playwright() as playwright:
         return maximum;
       };
     }""")
+    page.wait_for_function("app.audio.context.state==='running' && app.audio.state==='PLAYING' && app.audio.notesScheduled>0")
     check("La música genera señal de audio", page.evaluate("async()=>app.audio.context.state==='running' && app.audio.notesScheduled>0 && await peak()>0.001"))
     page.keyboard.press("Escape")
     page.wait_for_timeout(1000)
@@ -169,6 +206,9 @@ with sync_playwright() as playwright:
     page.locator("#volume").focus()
     page.keyboard.press("ArrowRight")
     check("Volumen accesible con teclado", page.locator("#volume").input_value() == "31" and page.evaluate("app.audio.settings.volume===.31 && app.input.keys.size===0"))
+    page.keyboard.press('Escape')
+    check("Escape pausa aun con el control de volumen enfocado",page.evaluate("app.game.state==='PAUSED'"))
+    page.locator('#state-primary').click()
     page.locator("#volume").fill("0")
     page.wait_for_timeout(500)
     check("Volumen cero silencia también los efectos", page.evaluate("async()=>{app.audio.consume([{type:'flag'}]);return await peak()<0.00001;}"))
@@ -186,6 +226,7 @@ with sync_playwright() as playwright:
         page.set_viewport_size({"width":width,"height":height})
         page.screenshot(path=str(OUTPUT / f"menu-{width}.png"), full_page=True)
         check(f"Diseño sin desbordamiento horizontal a {width}px",page.evaluate("document.documentElement.scrollWidth <= innerWidth"))
+        check(f"Botones del menú dentro de la escena a {width}px",page.locator('#how-to').evaluate("e=>e.getBoundingClientRect().bottom <= document.querySelector('.game-shell').getBoundingClientRect().bottom"))
         if width>700:
             check(f"Todo el juego cabe en pantalla a {width}×{height}",page.locator(".game-shell").evaluate("e=>e.getBoundingClientRect().bottom<=innerHeight"))
 

@@ -1,4 +1,5 @@
 // Drives the real movement/update API. No position edits, invulnerability or disabled guardians.
+import { dangerAt, escapeTarget } from "../src/ai.js";
 import { findPath } from "../src/navigation.js";
 import {
   distance,
@@ -23,7 +24,13 @@ function steer(game, player, target) {
   return projectVector(waypoint.x - player.x, waypoint.y - player.y);
 }
 
-export function playJourney(game, mode, missionIndex = 0, resume = false) {
+export function playJourney(
+  game,
+  mode,
+  missionIndex = 0,
+  resume = false,
+  collectTreasures = false,
+) {
   if (!resume) game.start(mode, missionIndex);
   let captures = 0,
     rescues = 0,
@@ -36,7 +43,16 @@ export function playJourney(game, mode, missionIndex = 0, resume = false) {
     frames++
   ) {
     const [a, b] = game.players;
-    let target = game.flag.state === "CARRIED" ? game.map.base : game.flag;
+    const remaining = game.runes.filter((r) => !r.active);
+    const treasures = collectTreasures
+      ? game.relics.filter((r) => !r.collected)
+      : [];
+    const objectives = [...remaining, ...treasures].sort(
+      (x, y) => distance(a, x) - distance(a, y),
+    );
+    let target =
+      objectives[0] ??
+      (game.flag.state === "CARRIED" ? game.map.base : game.flag);
     if (b.state === "CAPTURED") target = b;
     const companionTarget =
       a.state === "CAPTURED"
@@ -44,11 +60,33 @@ export function playJourney(game, mode, missionIndex = 0, resume = false) {
         : game.flag.state === "CARRIED" && distance(a, game.map.base) < 1.5
           ? game.map.base
           : a;
-    const second =
+    let second =
       distance(a, b) < 0.5 && a.state !== "CAPTURED"
         ? { x: 0, y: 0 }
         : steer(game, b, companionTarget);
-    game.update(1 / 60, [steer(game, a, target), second]);
+    let first = steer(game, a, target);
+    for (const [player, destination, index] of [
+      [a, target, 0],
+      [b, companionTarget, 1],
+    ]) {
+      if (
+        player.protection <= 0 &&
+        player.state !== "CAPTURED" &&
+        player.state !== "HIDDEN" &&
+        dangerAt(game, player, 0.15)
+      ) {
+        const escape = escapeTarget(game, player, destination);
+        if (escape) {
+          const direction = {
+            ...steer(game, player, escape),
+            dash: player.dashCooldown <= 0,
+          };
+          if (index === 0) first = direction;
+          else second = direction;
+        }
+      }
+    }
+    game.update(1 / 60, [first, second]);
     for (const player of game.players)
       if (!canOccupy(game.map, player.x, player.y))
         throw Error("Un explorador atravesó un obstáculo");
@@ -74,5 +112,10 @@ export function playJourney(game, mode, missionIndex = 0, resume = false) {
     captures,
     rescues,
     flags,
+    time: game.stats.time,
+    stars: game.result?.stars ?? 0,
+    runes: game.runes.filter((r) => r.active).length,
+    relics: game.relics.filter((r) => r.collected).length,
+    dashes: game.stats.dashes,
   };
 }

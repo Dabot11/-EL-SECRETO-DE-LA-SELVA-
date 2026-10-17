@@ -27,7 +27,7 @@
             ></span
           >
         </a>
-        <span class="edition"><i></i> PIXEL ART · AVENTURA 2.0</span>
+        <span class="edition"><i></i> PIXEL ART · AVENTURA 3.0</span>
       </header>
 
       <main>
@@ -99,6 +99,13 @@
                   ><span class="arrow" aria-hidden="true">→</span>
                 </button>
               </div>
+              <button
+                id="continue-game"
+                class="text-button continue-button"
+                hidden
+              >
+                Continuar misión →
+              </button>
               <button id="how-to" class="text-button">
                 <span>?</span> Cómo jugar <span class="text-arrow">→</span>
               </button>
@@ -115,6 +122,10 @@
                 <small id="mission-progress">MISIÓN 1 DE 5</small
                 ><strong id="objective">Encuentra la bandera</strong
                 ><span id="flag-status">⚑ En el pedestal</span>
+                <div class="mission-counters">
+                  <span id="rune-count"></span><span id="relic-count"></span
+                  ><time id="mission-clock">0:00</time>
+                </div>
               </div>
               <div class="team-attempts">
                 <small>INTENTOS COMPARTIDOS</small>
@@ -135,8 +146,9 @@
                   ></canvas
                   ><span
                     ><strong>EXPLORADOR 1</strong
-                    ><small id="player-one-status">W A S D</small></span
-                  >
+                    ><small id="player-one-status">W A S D</small
+                    ><small id="dash-one"></small
+                  ></span>
                 </div>
                 <div class="player-info red">
                   <canvas
@@ -147,8 +159,9 @@
                   ></canvas
                   ><span
                     ><strong>EXPLORADOR 2</strong
-                    ><small id="player-two-status">COMPAÑERO IA</small></span
-                  >
+                    ><small id="player-two-status">COMPAÑERO IA</small
+                    ><small id="dash-two"></small
+                  ></span>
                 </div>
               </div>
               <button
@@ -180,20 +193,22 @@
               <span class="eyebrow">ANTES DE ENTRAR AL TEMPLO</span>
               <h2 id="how-title">La aventura es juntos.</h2>
               <p class="modal-intro">
-                Recuperen la bandera roja y regresen <strong>los dos</strong> a
-                la entrada.
+                Activen las runas, recuperen la bandera roja y regresen
+                <strong>los dos</strong> a la entrada.
               </p>
               <div class="controls-grid">
                 <div>
                   <span class="blue-label">EXPLORADOR 1</span>
                   <div class="key-block">
-                    <kbd>W</kbd><br /><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
+                    <kbd>W</kbd><br /><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd
+                    ><small class="dash-key">Impulso: ESPACIO</small>
                   </div>
                 </div>
                 <div>
                   <span class="red-label">EXPLORADOR 2</span>
                   <div class="key-block">
-                    <kbd>↑</kbd><br /><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd>
+                    <kbd>↑</kbd><br /><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd
+                    ><small class="dash-key">Impulso: SHIFT DERECHO</small>
                   </div>
                 </div>
               </div>
@@ -209,7 +224,7 @@
                   <b>02</b
                   ><span
                     ><strong>Rescaten a su compañero.</strong> Acérquense a su
-                    burbuja para liberarlo.</span
+                    burbuja y permanezcan cerca hasta llenar la barra.</span
                   >
                 </p>
                 <p>
@@ -221,7 +236,12 @@
                 </p>
               </div>
               <p class="auto-note">
-                Todo sucede al acercarte. ¡Solo necesitas moverte!<br /><small
+                Evita las zonas de ataque iluminadas. Los tesoros dorados son
+                opcionales.
+              </p>
+              <p class="auto-note">
+                Las runas se activan al quedarte cerca un instante.<br />Muévete
+                + impulso para esquivar; recarga en 3,5 segundos.<br /><small
                   >En modo solo, el compañero te sigue y viene a
                   rescatarte.</small
                 >
@@ -252,6 +272,7 @@
               ></canvas>
               <h2 id="state-title">Aventura en pausa</h2>
               <p id="state-description"></p>
+              <div id="result-stats" hidden></div>
               <div class="result-buttons">
                 <button id="state-primary" class="button primary compact">
                   Continuar</button
@@ -271,9 +292,69 @@
         <section class="campaign" aria-label="Las cinco misiones">
           <div class="campaign-heading">
             <h2>El camino al secreto</h2>
-            <span>CADA MAPA, UN NUEVO RETO</span>
+            <label class="route-mode-label"
+              >Récords
+              <select id="route-mode">
+                <option value="1">Solo + IA</option>
+                <option value="2">Dos jugadores</option>
+              </select></label
+            >
           </div>
+          <p id="save-status" class="campaign-note"></p>
           <ol id="mission-route" class="mission-route"></ol>
+          <p class="campaign-note">
+            Tres estrellas: terminar · encontrar los 3 tesoros · terminar sin
+            perder intentos y con un máximo de 2 capturas. Repite una misión
+            desde el menú para mejorar tu récord.
+          </p>
+        </section>
+        <section class="bestiary" aria-label="Conoce a los guardianes">
+          <div class="campaign-heading">
+            <h2>Conoce a los guardianes</h2>
+            <span>OBSERVA · ESQUIVA · AVANZA</span>
+          </div>
+          <div class="guardian-cards">
+            <article>
+              <canvas
+                id="enemy-stone"
+                width="80"
+                height="86"
+                aria-hidden="true"
+              ></canvas>
+              <h3>Centinela de piedra</h3>
+              <p>Golpe corto y lento. Aléjate del círculo dorado.</p>
+            </article>
+            <article>
+              <canvas
+                id="enemy-hunter"
+                width="80"
+                height="86"
+                aria-hidden="true"
+              ></canvas>
+              <h3>Jaguar de jade</h3>
+              <p>Salta en línea recta. Esquiva hacia un lado cuando apunte.</p>
+            </article>
+            <article>
+              <canvas
+                id="enemy-spirit"
+                width="80"
+                height="86"
+                aria-hidden="true"
+              ></canvas>
+              <h3>Espíritu del río</h3>
+              <p>Su pulso azul alcanza más lejos. Busca un escondite.</p>
+            </article>
+            <article>
+              <canvas
+                id="enemy-warden"
+                width="80"
+                height="86"
+                aria-hidden="true"
+              ></canvas>
+              <h3>Guardián Solar</h3>
+              <p>Protege el último templo. Su gran golpe tarda en cargar.</p>
+            </article>
+          </div>
         </section>
         <div class="adventure-notes" aria-label="Consejos de la aventura">
           <div class="adventure-note">
@@ -306,7 +387,7 @@
         <span
           >UNA IDEA DE DAVID Y TAVITO <span class="footer-star">✦</span> HECHA
           PARA EXPLORAR</span
-        ><span>5 MISIONES <span class="footer-divider">/</span> V.2.0</span>
+        ><span>5 MISIONES <span class="footer-divider">/</span> V.3.0</span>
       </footer>
     </div>
     <script type="module" src="./src/main.js"></script>

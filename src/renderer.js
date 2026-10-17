@@ -6,6 +6,7 @@ import {
   GuardState,
 } from "./config.js";
 import { TILE, tileAt } from "./map.js";
+import { ENEMIES, trapPhase } from "./challenges.js";
 import { THEMES } from "./missions.js";
 import { drawSprite, drawArt } from "./sprites.js";
 const hash = (x, y) => {
@@ -390,7 +391,7 @@ export class Renderer {
     this.rune(x + 10, y - h + 8, "#f8d981");
     this.rect(x - 1, y - h - 3, 4, 4, "#e9ce88");
   }
-  pedestal(x, y, hasFlag) {
+  pedestal(x, y, hasFlag, locked = false) {
     const p = this.palette;
     this.shadow(x, y, 26, 10);
     for (let i = 0; i < 3; i++) {
@@ -401,7 +402,19 @@ export class Renderer {
     this.rune(x, y - 15, p.accent);
     if (hasFlag) {
       this.flag(x, y - 17);
-      this.text("BANDERA", x + 6, y - 66, "#f5dc96", 8);
+      this.text(
+        locked ? "SELLADA" : "BANDERA",
+        x + 6,
+        y - 66,
+        locked ? "#96efe0" : "#f5dc96",
+        8,
+      );
+      if (locked) {
+        this.ctx.save();
+        this.ctx.globalAlpha = 0.6;
+        this.diamond(x + 8, y - 35, 22, 25, "#153c3a88", "#9dedd4");
+        this.ctx.restore();
+      }
     }
   }
   floor(map) {
@@ -592,6 +605,140 @@ export class Renderer {
           }
         }
   }
+  bar(x, y, progress, color = "#9ce6cf", width = 30) {
+    this.rect(x - width / 2 - 1, y - 1, width + 2, 5, "#092922");
+    this.rect(x - width / 2, y, width, 3, "#45604c");
+    this.rect(
+      x - width / 2,
+      y,
+      width * Math.max(0, Math.min(1, progress)),
+      3,
+      color,
+    );
+  }
+  zone(point, radius, color, fill = true) {
+    const s = toScreen(point.x, point.y),
+      c = this.ctx;
+    c.save();
+    c.beginPath();
+    c.ellipse(
+      s.x,
+      s.y,
+      W * Math.SQRT2 * radius,
+      H * Math.SQRT2 * radius,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    c.strokeStyle = color;
+    c.lineWidth = 2;
+    if (fill) {
+      c.fillStyle = color + "30";
+      c.fill();
+    }
+    c.stroke();
+    c.restore();
+  }
+  signals(game) {
+    this.zone(game.map.base, CONFIG.safeRadius, "#8fcab1", false);
+    for (const trap of game.traps) {
+      const phase = trapPhase(trap, game.time),
+        s = toScreen(trap.x, trap.y),
+        color =
+          phase === "active"
+            ? "#f3a368"
+            : phase === "warning"
+              ? "#f4d58a"
+              : "#75999a";
+      this.zone(trap, 0.62, color, phase !== "idle");
+      this.text(
+        phase === "active" ? "≈" : phase === "warning" ? "!" : "·",
+        s.x,
+        s.y + 3,
+        color,
+        14,
+      );
+    }
+    for (const guard of game.guards) {
+      if (
+        !guard.attack ||
+        ![GuardState.WINDUP, GuardState.LUNGE].includes(guard.state)
+      )
+        continue;
+      const a = guard.attack,
+        s = toScreen(a.origin.x, a.origin.y),
+        color = ENEMIES[guard.type].color;
+      if (guard.type === "hunter") {
+        const b = toScreen(a.end.x, a.end.y);
+        const dx = a.end.x - a.origin.x,
+          dy = a.end.y - a.origin.y,
+          length = Math.hypot(dx, dy) || 1;
+        const nx = (-dy / length) * a.radius,
+          ny = (dx / length) * a.radius;
+        const corners = [
+          [a.origin.x + nx, a.origin.y + ny],
+          [a.end.x + nx, a.end.y + ny],
+          [a.end.x - nx, a.end.y - ny],
+          [a.origin.x - nx, a.origin.y - ny],
+        ].map(([x, y]) => {
+          const p = toScreen(x, y);
+          return [p.x, p.y];
+        });
+        this.poly(corners, color + "40", color);
+        this.line(
+          [
+            [s.x, s.y],
+            [b.x, b.y],
+          ],
+          color,
+          2,
+        );
+        this.diamond(b.x, b.y, 7, 4, color);
+      } else this.zone(a.origin, a.radius, color);
+      this.bar(
+        s.x,
+        s.y + 10,
+        1 - guard.attackTimer / ENEMIES[guard.type].windup,
+        color,
+        36,
+      );
+    }
+  }
+  objectiveObject(item, isRune) {
+    const s = toScreen(item.x, item.y),
+      c = isRune ? (item.active ? "#b5f5c6" : "#7fe2de") : "#f5ce76";
+    this.shadow(s.x, s.y, 14, 5);
+    if (isRune) {
+      this.diamond(s.x, s.y, 17, 8, "#294c40", c);
+      this.poly(
+        [
+          [s.x - 7, s.y - 4],
+          [s.x - 7, s.y - 24],
+          [s.x, s.y - 30],
+          [s.x + 7, s.y - 24],
+          [s.x + 7, s.y - 4],
+          [s.x, s.y],
+        ],
+        item.active ? "#4c9c78" : "#325f59",
+        c,
+      );
+      this.rune(s.x, s.y - 17, c);
+      this.text(item.active ? "✓" : `R${item.id + 1}`, s.x, s.y - 37, c, 9);
+      if (item.progress > 0 && !item.active)
+        this.bar(s.x, s.y + 7, item.progress / CONFIG.runeTime, c);
+    } else {
+      const bob = Math.sin(this.time * 3 + item.id) * 2;
+      this.diamond(s.x, s.y - 13 + bob, 7, 11, c, "#fff1b2");
+      this.line(
+        [
+          [s.x, s.y - 24 + bob],
+          [s.x, s.y - 2 + bob],
+        ],
+        "#fff6d1",
+      );
+      this.text("✦", s.x, s.y - 31 + bob, c, 10);
+    }
+  }
   player(p, game) {
     const s = toScreen(p.x, p.y),
       c = this.ctx,
@@ -608,6 +755,20 @@ export class Renderer {
         : Math.sin(this.time * 2 + p.id) > 0.5
           ? -1
           : 0;
+    if (p.dashTime > 0) {
+      this.ctx.save();
+      this.ctx.globalAlpha = 0.45;
+      this.line(
+        [
+          [s.x - p.dashVector.x * 25, s.y - p.dashVector.y * 25 - 12],
+          [s.x, s.y - 12],
+        ],
+        p.id ? "#ffc4a1" : "#a0eeff",
+        10,
+      );
+      this.ctx.restore();
+    }
+    if (p.slowTime > 0) this.zone(p, 0.35, "#d5a5e9");
     this.shadow(s.x, s.y, 11, 4);
     c.save();
     if (hidden) c.globalAlpha = 0.38;
@@ -647,8 +808,16 @@ export class Renderer {
       }
       c.restore();
     }
-    if (captured) this.text("¡AYUDA!", s.x, s.y - 56, "#c9f5ee", 9);
-    else if (!hidden)
+    if (captured) {
+      this.text(
+        p.rescueProgress > 0 ? "RESCATANDO" : "¡AYUDA!",
+        s.x,
+        s.y - 56,
+        "#c9f5ee",
+        9,
+      );
+      this.bar(s.x, s.y - 52, p.rescueProgress / CONFIG.rescueTime);
+    } else if (!hidden)
       this.text(`${p.id + 1}`, s.x, s.y - 48, p.id ? "#ffd0a3" : "#b3eeef", 10);
   }
   guard(g) {
@@ -658,9 +827,21 @@ export class Renderer {
     drawSprite(this.ctx, g.type, s.x, s.y + float, {
       frame: g.moving ? Math.floor(this.time * 4) : 0,
       facing: g.facing,
-      scale: g.type === "stone" ? 2.4 : 1.8,
+      scale:
+        g.type === "warden"
+          ? 3.2
+          : g.type === "stone"
+            ? 2.4
+            : g.type === "hunter"
+              ? 1.7
+              : 1.8,
     });
-    if (g.state === GuardState.CHASE) {
+    if (g.type === "warden") this.text("SOLAR", s.x, s.y - 79, "#ffca85", 8);
+    if (g.state === GuardState.WINDUP)
+      this.text("¡!", s.x, s.y - 65, ENEMIES[g.type].color, 17);
+    else if (g.state === GuardState.RECOVER)
+      this.text("···", s.x, s.y - 60, "#a7c5ae", 12);
+    else if (g.state === GuardState.CHASE) {
       this.rect(s.x - 6, s.y - 72, 12, 15, "#c26744");
       this.text("!", s.x, s.y - 60, "#ffdf93", 13);
     } else if (g.state === GuardState.SEARCH)
@@ -724,6 +905,7 @@ export class Renderer {
       if (this.cachedMission !== game.map.index) this.cacheFloor(game.map);
       c.drawImage(this.groundLayer, 0, 0);
       this.water(game.map);
+      this.signals(game);
       const objects = [],
         add = (x, y, draw, offset = 0) =>
           objects.push({ depth: x + y + offset, draw });
@@ -763,7 +945,12 @@ export class Renderer {
         pos.x,
         pos.y,
         () =>
-          this.pedestal(s.x, s.y, game.flag.state === FlagState.ON_PEDESTAL),
+          this.pedestal(
+            s.x,
+            s.y,
+            game.flag.state === FlagState.ON_PEDESTAL,
+            !game.runes.every((r) => r.active),
+          ),
         -0.3,
       );
       for (const [x, y] of [
@@ -782,6 +969,11 @@ export class Renderer {
           this.flag(p.x, p.y);
         });
       }
+      for (const rune of game.runes)
+        add(rune.x, rune.y, () => this.objectiveObject(rune, true));
+      for (const relic of game.relics)
+        if (!relic.collected)
+          add(relic.x, relic.y, () => this.objectiveObject(relic, false));
       for (const guard of game.guards)
         add(guard.x, guard.y, () => this.guard(guard));
       for (const player of game.players)

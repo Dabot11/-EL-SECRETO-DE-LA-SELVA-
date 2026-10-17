@@ -179,11 +179,13 @@ test("guardia recorre PATROL → CHASE → SEARCH → RETURN → PATROL", () => 
   assert.equal(guard.state, GuardState.PATROL);
 });
 
-test("captura por contacto inmoviliza sin gastar un intento", () => {
+test("un golpe anunciado captura e inmoviliza sin gastar un intento", () => {
   const g = game();
   position(g.players[0], 5.5, 5.5);
-  Object.assign(g.guards[0], { x: 5.5, y: 5.5 });
+  Object.assign(g.guards[0], { x: 5.5, y: 5.5, attackCooldown: 0 });
   g.update(0.01);
+  assert.notEqual(g.players[0].state, PlayerState.CAPTURED);
+  tick(g, 0.9);
   assert.equal(g.players[0].state, PlayerState.CAPTURED);
   assert.equal(g.attempts, 3);
   const before = { ...g.players[0] };
@@ -201,7 +203,7 @@ test("rescate automático rompe burbuja y protege durante 1.5 segundos", () => {
   position(g.players[0], 5.5, 11.5);
   position(g.players[1], 6.1, 11.5);
   g.capture(g.players[0]);
-  g.update(0.01);
+  g.rescue(CONFIG.rescueTime);
   assert.equal(g.players[0].state, PlayerState.PROTECTED);
   assert.equal(g.players[0].protection, CONFIG.protectionTime);
   assert.equal(g.attempts, 3);
@@ -234,7 +236,7 @@ test("no hay liberación por tiempo ni rescate a través de un muro", () => {
   position(g.players[0], 1.8, 1.8);
   position(g.players[1], 2.2, 2.2);
   g.capture(g.players[0]);
-  g.rescue();
+  g.rescue(CONFIG.rescueTime);
   assert.equal(g.players[0].state, PlayerState.CAPTURED);
 });
 
@@ -274,12 +276,13 @@ test("la IA se esconde con el humano y también puede ser capturada y rescatada"
   g.capture(g.players[1]);
   assert.equal(g.players[1].state, PlayerState.CAPTURED);
   position(g.players[0], 5.9, 11.5);
-  g.update(0.01);
+  tick(g, 0.65);
   assert.equal(g.players[1].state, PlayerState.PROTECTED);
 });
 
 test("la bandera se recoge por contacto y solo tiene un portador", () => {
   const g = game();
+  g.runes.forEach((r) => (r.active = true));
   g.guards = [];
   for (const p of g.players) position(p, g.map.pedestal.x, g.map.pedestal.y);
   g.update(0.01);
@@ -293,6 +296,7 @@ test("la bandera se recoge por contacto y solo tiene un portador", () => {
 
 test("capturar al portador deja bandera accesible y el compañero puede recogerla", () => {
   const g = game();
+  g.runes.forEach((r) => (r.active = true));
   g.guards = [];
   position(g.players[0], 14.5, 2.5);
   g.collectFlag();
@@ -311,6 +315,7 @@ test("capturar al portador deja bandera accesible y el compañero puede recogerl
 
 test("captura doble resta exactamente un intento y reinicia todo el nivel", () => {
   const g = game();
+  g.runes.forEach((r) => (r.active = true));
   position(g.players[0], 14.5, 2.5);
   g.collectFlag();
   g.players.forEach((p) => g.capture(p));
@@ -360,7 +365,7 @@ test("la victoria exige bandera, ambos libres y ambos en la entrada", () => {
   g.capture(g.players[1]);
   g.checkOutcome();
   assert.equal(g.state, GameState.PLAYING);
-  g.rescue();
+  g.rescue(CONFIG.rescueTime);
   g.checkOutcome();
   assert.equal(g.state, GameState.MISSION_COMPLETE);
 });
@@ -416,11 +421,11 @@ test("la navegación física recorre ida y vuelta sin atascarse ni atravesar obs
 });
 
 for (const mode of [1, 2])
-  test(`partida completa, modo ${mode}: ida, captura, rescate, bandera y victoria con guardianes activos`, () => {
+  test(`partida completa, modo ${mode}: runas, evasión, bandera y victoria con guardianes activos`, () => {
     const result = playJourney(new Game(), mode);
     assert.equal(result.state, GameState.MISSION_COMPLETE);
     assert.ok(result.attempts > 0);
-    assert.ok(result.captures > 0);
-    assert.ok(result.rescues > 0);
+    assert.equal(result.runes, 1);
+    assert.ok(result.dashes > 0);
     assert.ok(result.flags > 0);
   });

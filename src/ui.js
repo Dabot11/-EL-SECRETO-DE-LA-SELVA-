@@ -1,4 +1,5 @@
 import { GameState, PlayerState, FlagState } from "./config.js";
+import { formatTime } from "./progress.js";
 import { MISSIONS } from "./missions.js";
 import { paintPortrait, drawSprite } from "./sprites.js";
 const $ = (id) => document.getElementById(id);
@@ -11,10 +12,23 @@ export class UI {
     this.howOpen = false;
     this.lastToast = "";
     this.paintPortraits();
-    $("mission-route").innerHTML = MISSIONS.map(
-      (mission, i) =>
-        `<li data-mission="${i}"><span class="route-number">0${i + 1}</span><strong>${mission.name}</strong><small>${mission.subtitle}</small><span class="difficulty" aria-label="Dificultad ${i + 1} de 5">${"◆".repeat(i + 1)}<span>${"◇".repeat(4 - i)}</span></span></li>`,
-    ).join("");
+    this.routeMode = 1;
+    this.routeKey = "";
+    $("route-mode").onchange = () => {
+      this.routeMode = Number($("route-mode").value);
+      this.update();
+    };
+    $("continue-game").onclick = () => {
+      const saved = game.progress.data.checkpoint;
+      if (saved) this.start(saved.mode, saved.index);
+    };
+    $("mission-route").onclick = (e) => {
+      const button = e.target.closest("button[data-mission]");
+      if (!button || game.state !== GameState.MENU) return;
+      const index = Number(button.dataset.mission);
+      if (game.progress.unlocked(this.routeMode, index))
+        this.start(this.routeMode, index);
+    };
     for (const [id, key] of [
       ["music-toggle", "music"],
       ["effects-toggle", "effects"],
@@ -80,6 +94,14 @@ export class UI {
   paintPortraits() {
     paintPortrait($("portrait-blue"));
     paintPortrait($("portrait-red"), true);
+    for (const type of ["stone", "hunter", "spirit", "warden"]) {
+      const canvas = $(`enemy-${type}`),
+        c = canvas.getContext("2d");
+      c.clearRect(0, 0, 80, 86);
+      drawSprite(c, type, 40, 80, {
+        scale: type === "hunter" ? 2 : type === "warden" ? 3.4 : 2.8,
+      });
+    }
   }
   async unlockAudio() {
     const available = await this.audio.unlock();
@@ -91,6 +113,8 @@ export class UI {
     this.unlockAudio();
     this.input.clear();
     this.closeHow(false);
+    this.routeMode = mode;
+    $("route-mode").value = mode;
     this.game.start(mode, missionIndex);
     this.update();
     $("game-canvas").focus({ preventScroll: true });
@@ -126,18 +150,28 @@ export class UI {
       : `0${g.missionIndex + 1} / 05 · ${g.map.mission.name.toUpperCase()}`;
     $("mission-progress").textContent =
       `MISIÓN ${g.missionIndex + 1} DE ${MISSIONS.length}`;
-    for (const item of $("mission-route").children) {
-      const index = Number(item.dataset.mission),
-        done =
-          !menu &&
-          (index < g.missionIndex ||
-            (index === g.missionIndex &&
-              [GameState.MISSION_COMPLETE, GameState.VICTORY].includes(state)));
-      item.classList.toggle("current", !menu && index === g.missionIndex);
-      item.classList.toggle("completed", done);
-      if (!menu && index === g.missionIndex)
-        item.setAttribute("aria-current", "step");
-      else item.removeAttribute("aria-current");
+    const checkpoint = g.progress.data.checkpoint;
+    $("continue-game").hidden = !checkpoint;
+    if (checkpoint)
+      $("continue-game").textContent =
+        `Continuar misión ${checkpoint.index + 1} · ${checkpoint.mode === 1 ? "solo + IA" : "de a dos"} →`;
+    $("save-status").textContent = g.progress.available
+      ? "Tu avance se guarda en este navegador. Continuar reinicia la misión pendiente."
+      : "El navegador no permite guardar. Puedes jugar y avanzar durante esta sesión.";
+    const routeKey = JSON.stringify([
+      menu,
+      g.missionIndex,
+      this.routeMode,
+      g.progress.data.records,
+    ]);
+    if (routeKey !== this.routeKey) {
+      this.routeKey = routeKey;
+      $("mission-route").innerHTML = MISSIONS.map((mission, i) => {
+        const record = g.progress.record(this.routeMode, i),
+          unlocked = g.progress.unlocked(this.routeMode, i),
+          current = !menu && i === g.missionIndex;
+        return `<li class="${record ? "completed " : ""}${current ? "current" : ""}" ${current ? 'aria-current="step"' : ""}><button data-mission="${i}" ${!menu || !unlocked ? "disabled" : ""} aria-label="${unlocked ? "Jugar" : "Bloqueada"}: ${mission.name}"><span class="route-number">0${i + 1}</span><strong>${mission.name}</strong><small>${mission.subtitle}</small><span class="difficulty" aria-label="Dificultad ${i + 1} de 5">${"◆".repeat(i + 1)}<span>${"◇".repeat(4 - i)}</span></span><small class="route-record">${record ? `${"★".repeat(record.stars)}${"☆".repeat(3 - record.stars)} · ${formatTime(record.time)} · ${record.score} pts` : unlocked ? "LISTA PARA EXPLORAR" : "Completa la misión anterior"}</small></button></li>`;
+      }).join("");
     }
     $("hud").hidden = state === GameState.MENU;
     $("round-screen").hidden = state !== GameState.ROUND_RESET;
@@ -148,12 +182,22 @@ export class UI {
       ? "¡Regresen juntos a la entrada!"
       : g.flag.state === FlagState.DROPPED
         ? "Recupera la bandera caída"
-        : "Encuentra la bandera";
+        : g.runes.every((r) => r.active)
+          ? "¡Busca la bandera!"
+          : `Activa las runas de jade`;
     $("flag-status").textContent = carrying
       ? `⚑ La lleva el explorador ${g.flag.carrier + 1}`
       : g.flag.state === FlagState.DROPPED
         ? "⚑ En el suelo · acércate para recogerla"
-        : "⚑ En el pedestal";
+        : g.runes.every((r) => r.active)
+          ? "⚑ El sello está abierto"
+          : "⚑ Sellada · quédate cerca de cada runa";
+    $("rune-count").textContent =
+      `◇ RUNAS ${g.runes.filter((r) => r.active).length}/${g.runes.length}`;
+    $("relic-count").textContent =
+      `✦ TESOROS ${g.relics.filter((r) => r.collected).length}/3`;
+    $("mission-clock").textContent = formatTime(g.stats.time);
+    $("hud").classList.toggle("alarm", g.alarm);
     $("attempts").setAttribute(
       "aria-label",
       `${g.attempts} intentos compartidos`,
@@ -176,6 +220,10 @@ export class UI {
                     ? "VOY A RESCATARTE"
                     : "COMPAÑERO IA"
                   : "↑ ← ↓ →";
+      $(p.id === 0 ? "dash-one" : "dash-two").textContent =
+        p.id === 1 && g.mode === 1
+          ? "ESQUIVA AUTOMÁTICA"
+          : `${p.id === 0 ? "ESPACIO" : "SHIFT DER."} · ${p.dashCooldown > 0 ? `RECARGA ${p.dashCooldown.toFixed(1)}s` : "IMPULSO LISTO"}`;
       $(p.id === 0 ? "player-one-status" : "player-two-status").textContent =
         label;
     }
@@ -219,6 +267,11 @@ export class UI {
             : lost
               ? `Pueden reintentar ${g.map.mission.name} sin volver a la primera misión.`
               : "La selva puede esperar. Continúen cuando estén listos.";
+        const result = g.result;
+        $("result-stats").hidden = !(won || completed) || !result;
+        if ((won || completed) && result)
+          $("result-stats").innerHTML =
+            `<div class="result-stars" aria-label="${result.stars} de 3 estrellas">${"★".repeat(result.stars)}<span>${"☆".repeat(3 - result.stars)}</span></div><div class="result-metrics"><span><b>${result.score}</b>PUNTOS</span><span><b>${formatTime(result.time)}</b>TIEMPO</span><span><b>${result.relics}/3</b>TESOROS</span><span><b>${result.captures}</b>CAPTURAS</span></div><small>${result.clean ? "★ Expedición limpia" : "☆ Expedición limpia: sin perder intentos, máximo 2 capturas"} · ${result.relics === 3 ? "★ Todos los tesoros" : "☆ Encuentra los 3 tesoros"}</small>`;
         $("state-primary").textContent = won
           ? "Volver a jugar →"
           : completed

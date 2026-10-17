@@ -8,33 +8,40 @@ const MOVE_KEYS = new Set([
   "ArrowLeft",
   "ArrowRight",
 ]);
+const DASH_KEYS = new Set(["Space", "ShiftRight"]);
 export class Input {
-  constructor(onPause, onBlur) {
+  constructor(onPause, onBlur, isPlaying = () => true) {
     this.keys = new Set();
+    this.actions = new Set();
     window.addEventListener("keydown", (e) => {
-      if (
+      const editing =
         e.target instanceof Element &&
-        e.target.closest("input, textarea, select")
-      )
+        e.target.closest("input,textarea,select");
+      if (
+        (e.code === "Escape" || (e.code === "KeyP" && !editing)) &&
+        !e.repeat
+      ) {
+        e.preventDefault();
+        onPause();
         return;
+      }
+      if (editing || !isPlaying()) return;
       if (MOVE_KEYS.has(e.code)) {
         e.preventDefault();
         this.keys.add(e.code);
       }
-      if ((e.code === "Escape" || e.code === "KeyP") && !e.repeat) {
+      if (
+        e.code === "Space" &&
+        e.target instanceof Element &&
+        e.target.closest("button,a,summary")
+      )
+        return;
+      if (DASH_KEYS.has(e.code)) {
         e.preventDefault();
-        onPause();
+        if (!e.repeat) this.actions.add(e.code);
       }
     });
     window.addEventListener("keyup", (e) => {
-      if (
-        MOVE_KEYS.has(e.code) &&
-        !(
-          e.target instanceof Element &&
-          e.target.closest("input, textarea, select")
-        )
-      )
-        e.preventDefault();
       this.keys.delete(e.code);
     });
     window.addEventListener("blur", () => {
@@ -50,12 +57,23 @@ export class Input {
   }
   clear() {
     this.keys.clear();
+    this.actions.clear();
   }
   read() {
-    const k = (code) => (this.keys.has(code) ? 1 : 0);
-    return [
-      { x: k("KeyD") - k("KeyA"), y: k("KeyS") - k("KeyW") },
-      { x: k("ArrowRight") - k("ArrowLeft"), y: k("ArrowDown") - k("ArrowUp") },
+    const k = (c) => (this.keys.has(c) ? 1 : 0);
+    const input = [
+      {
+        x: k("KeyD") - k("KeyA"),
+        y: k("KeyS") - k("KeyW"),
+        dash: this.actions.has("Space"),
+      },
+      {
+        x: k("ArrowRight") - k("ArrowLeft"),
+        y: k("ArrowDown") - k("ArrowUp"),
+        dash: this.actions.has("ShiftRight"),
+      },
     ];
+    this.actions.clear();
+    return input;
   }
 }

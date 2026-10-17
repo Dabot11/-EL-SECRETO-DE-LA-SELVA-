@@ -2,6 +2,9 @@
 export let atlasReady = false;
 let atlas = null;
 const frames = [];
+let guardianAtlas = null;
+const guardianFrames = [];
+export let guardiansReady = false;
 export async function loadSprites() {
   atlas = new Image();
   atlas.src = new URL("../assets/adventure-sprites.png", import.meta.url).href;
@@ -15,14 +18,17 @@ export async function loadSprites() {
     cw = atlas.width / 4,
     ch = atlas.height / 2;
   for (let cell = 0; cell < 8; cell++) {
-    const left = (cell % 4) * cw,
+    // Lower-row artwork crosses uniform cell boundaries: exclude neighboring sprites.
+    const bounds = [0, 410, 780, 1100, 1536];
+    const left = cell < 4 ? (cell % 4) * cw : bounds[cell - 4],
+      right = cell < 4 ? left + cw : bounds[cell - 3],
       top = Math.floor(cell / 4) * ch;
-    let minX = left + cw,
+    let minX = right,
       minY = top + ch,
       maxX = left,
       maxY = top;
     for (let y = top; y < top + ch; y++)
-      for (let x = left; x < left + cw; x++)
+      for (let x = left; x < right; x++)
         if (pixels[(y * atlas.width + x) * 4 + 3] > 175) {
           minX = Math.min(minX, x);
           maxX = Math.max(maxX, x);
@@ -32,11 +38,55 @@ export async function loadSprites() {
     frames.push({
       x: Math.max(left, minX - 3),
       y: Math.max(top, minY - 3),
-      w: Math.min(cw, maxX - minX + 7),
+      w: Math.min(right, maxX + 4) - Math.max(left, minX - 3),
       h: Math.min(ch, maxY - minY + 7),
     });
   }
   atlasReady = true;
+  try {
+    guardianAtlas = new Image();
+    guardianAtlas.src = new URL(
+      "../assets/guardian-sprites.png",
+      import.meta.url,
+    ).href;
+    await guardianAtlas.decode();
+    const surface = document.createElement("canvas");
+    surface.width = guardianAtlas.width;
+    surface.height = guardianAtlas.height;
+    const context = surface.getContext("2d", { willReadFrequently: true });
+    context.drawImage(guardianAtlas, 0, 0);
+    const rgba = context.getImageData(0, 0, surface.width, surface.height).data;
+    // The generated atlas has a deliberately tighter first row; keep full boss crowns.
+    for (let cell = 0; cell < 4; cell++) {
+      const left = ((cell % 2) * surface.width) / 2,
+        right = left + surface.width / 2,
+        top = cell < 2 ? 0 : 435,
+        bottom = cell < 2 ? 435 : surface.height;
+      let minX = right,
+        minY = bottom,
+        maxX = left,
+        maxY = top;
+      for (let y = top; y < bottom; y++)
+        for (let x = left; x < right; x++)
+          if (rgba[(y * surface.width + x) * 4 + 3] > 175) {
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+          }
+      const x = Math.max(left, minX - 2),
+        y = Math.max(top, minY - 2);
+      guardianFrames.push({
+        x,
+        y,
+        w: Math.min(right, maxX + 3) - x,
+        h: Math.min(bottom, maxY + 3) - y,
+      });
+    }
+    guardiansReady = true;
+  } catch {
+    /* Matrix guardian fallback keeps the game playable if an image is unavailable. */
+  }
 }
 export function drawArt(ctx, cell, x, y, height, facing = 1) {
   if (!atlasReady) return false;
@@ -160,6 +210,31 @@ export function drawSprite(
   y,
   { red = false, frame = 0, facing = 1, scale = 1 } = {},
 ) {
+  if (type === "hunter" || type === "warden") {
+    if (guardiansReady) {
+      const f = guardianFrames[(type === "warden" ? 2 : 0) + (frame % 2)],
+        height = Math.round(22 * scale),
+        width = Math.round((height * f.w) / f.h);
+      ctx.save();
+      ctx.translate(Math.round(x), Math.round(y));
+      ctx.scale(facing, 1);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(
+        guardianAtlas,
+        f.x,
+        f.y,
+        f.w,
+        f.h,
+        -Math.round(width / 2),
+        -height,
+        width,
+        height,
+      );
+      ctx.restore();
+      return;
+    }
+    type = "stone";
+  }
   if (atlasReady) {
     const cell =
       type === "explorer"
