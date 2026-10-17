@@ -4,12 +4,7 @@ import { Game } from "../src/game.js";
 import { Progress } from "../src/progress.js";
 import { CONFIG, PlayerState, FlagState, GuardState } from "../src/config.js";
 import { ENEMIES, trapPhase } from "../src/challenges.js";
-import {
-  canDetect,
-  updateGuard,
-  updateCompanion,
-  dangerAt,
-} from "../src/ai.js";
+import { canDetect, updateGuard, dangerAt } from "../src/ai.js";
 import { canOccupy, distance, projectVector } from "../src/collisions.js";
 import { findPath } from "../src/navigation.js";
 import { playJourney } from "./journey.js";
@@ -63,6 +58,7 @@ function arena(type = "stone") {
 test("todas las runas, tesoros y trampas están en suelo alcanzable y fuera de la entrada", () => {
   for (let i = 0; i < 5; i++) {
     const g = fixture(i);
+    if (g.bridge) g.openBridge();
     for (const item of [...g.runes, ...g.relics, ...g.traps]) {
       assert.ok(canOccupy(g.map, item.x, item.y));
       assert.ok(findPath(g.map, g.map.base, item).length);
@@ -96,7 +92,7 @@ test("la bandera queda sellada hasta activar todas las runas; salir interrumpe l
   assert.equal(g.alarm, true);
 });
 test("cada tesoro se cobra una vez y un intento nuevo restaura los objetivos", () => {
-  const g = fixture();
+  const g = fixture(1);
   place(g.players[0], g.relics[0]);
   tick(g, 1);
   assert.equal(g.events.filter((e) => e.type === "relic").length, 1);
@@ -151,7 +147,8 @@ test("el impulso consume recarga, protege brevemente y no atraviesa agua ni muro
   assert.equal(g.capture(p), true);
   const before = { x: p.x, y: p.y };
   g.movePlayer(p, { x: 1, y: 0, dash: true }, 0.05);
-  assert.equal(distance(before, p), 0);
+  assert.ok(distance(before, p) > 0);
+  assert.equal(p.dashTime, 0);
 });
 test("la pausa congela impulso, trampas, cronómetro y carga de runas", () => {
   const g = fixture(2);
@@ -208,16 +205,7 @@ test("el ataque no se inicia a través de paredes", () => {
   updateGuard(guard, g, 0.01);
   assert.notEqual(guard.state, GuardState.WINDUP);
 });
-test("el compañero IA usa su impulso con la misma recarga ante una amenaza", () => {
-  const { g, guard } = arena("spirit");
-  g.mode = 1;
-  place(g.players[1], { x: 8.1, y: 6.6 });
-  updateGuard(guard, g, 0.01);
-  updateCompanion(g, 0.01);
-  assert.equal(g.players[1].aiState, "DODGE");
-  assert.ok(g.players[1].dashTime > 0);
-  assert.equal(g.players[1].dashCooldown, CONFIG.dashCooldown);
-});
+
 test("las trampas avisan antes de frenar y el impulso permite cruzarlas", () => {
   const g = fixture(2),
     trap = g.traps[0],
@@ -361,41 +349,4 @@ test("los ataques cercanos se turnan y un salto no rebasa su aviso con frames la
   while (guard.state === GuardState.LUNGE) updateGuard(guard, g, 0.05);
   assert.equal(guard.state, GuardState.RECOVER);
   assert.ok(distance(guard, end) < 0.001);
-});
-
-test("el compañero respeta las mismas penalizaciones de bandera y suelo que el jugador", () => {
-  const g = fixture();
-  g.mode = 1;
-  place(g.players[0], { x: 7.5, y: 11.5 });
-  const bot = g.players[1];
-  place(bot, { x: 5.5, y: 11.5 });
-  const before = { ...bot };
-  bot.slowTime = 1;
-  g.flag.state = FlagState.CARRIED;
-  g.flag.carrier = 1;
-  updateCompanion(g, 0.05);
-  const movement = projectVector(bot.x - before.x, bot.y - before.y);
-  assert.ok(
-    Math.abs(
-      Math.hypot(movement.x, movement.y) -
-        CONFIG.playerSpeed * 0.62 * 0.93 * 0.05,
-    ) < 0.001,
-  );
-});
-
-test("el compañero espera fuera de un ataque antes de acercarse a rescatar", () => {
-  const { g, guard, p } = arena("spirit");
-  g.mode = 1;
-  const bot = g.players[1];
-  place(bot, { x: 9.3, y: 6.5 });
-  updateGuard(guard, g, 0.01);
-  g.capture(p);
-  const before = { ...bot };
-  updateCompanion(g, 0.05);
-  assert.equal(bot.aiState, "WAIT");
-  assert.equal(distance(before, bot), 0);
-  for (let i = 0; i < 110; i++) updateGuard(guard, g, 0.01);
-  updateCompanion(g, 0.05);
-  assert.equal(bot.aiState, "RESCUE");
-  assert.ok(distance(before, bot) > 0);
 });

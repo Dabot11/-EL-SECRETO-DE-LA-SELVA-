@@ -154,7 +154,7 @@ export class UI {
     $("continue-game").hidden = !checkpoint;
     if (checkpoint)
       $("continue-game").textContent =
-        `Continuar misión ${checkpoint.index + 1} · ${checkpoint.mode === 1 ? "solo + IA" : "de a dos"} →`;
+        `Continuar misión ${checkpoint.index + 1} · ${checkpoint.mode === 1 ? "un jugador" : "de a dos"} →`;
     $("save-status").textContent = g.progress.available
       ? "Tu avance se guarda en este navegador. Continuar reinicia la misión pendiente."
       : "El navegador no permite guardar. Puedes jugar y avanzar durante esta sesión.";
@@ -163,6 +163,7 @@ export class UI {
       g.missionIndex,
       this.routeMode,
       g.progress.data.records,
+      g.progress.data.unlocked,
     ]);
     if (routeKey !== this.routeKey) {
       this.routeKey = routeKey;
@@ -177,55 +178,97 @@ export class UI {
     $("round-screen").hidden = state !== GameState.ROUND_RESET;
     $("round-description").textContent =
       `Quedan ${g.attempts} ${g.attempts === 1 ? "intento" : "intentos"}. ¡La aventura continúa!`;
-    const carrying = g.flag.state === FlagState.CARRIED;
-    $("objective").textContent = carrying
-      ? "¡Regresen juntos a la entrada!"
-      : g.flag.state === FlagState.DROPPED
-        ? "Recupera la bandera caída"
-        : g.runes.every((r) => r.active)
-          ? "¡Busca la bandera!"
-          : `Activa las runas de jade`;
-    $("flag-status").textContent = carrying
-      ? `⚑ La lleva el explorador ${g.flag.carrier + 1}`
-      : g.flag.state === FlagState.DROPPED
-        ? "⚑ En el suelo · acércate para recogerla"
-        : g.runes.every((r) => r.active)
-          ? "⚑ El sello está abierto"
-          : "⚑ Sellada · quédate cerca de cada runa";
-    $("rune-count").textContent =
-      `◇ RUNAS ${g.runes.filter((r) => r.active).length}/${g.runes.length}`;
+    const solo = g.mode === 1,
+      carrying = g.flag.state === FlagState.CARRIED,
+      bridge = g.bridge;
+    const bridgeStep =
+      bridge && !bridge.open
+        ? !bridge.charged
+          ? 1
+          : bridge.litTime <= 0
+            ? 2
+            : 3
+        : 0;
+    $("objective").textContent =
+      bridgeStep === 1
+        ? "Atrae el salto hacia la estatua"
+        : bridgeStep === 2
+          ? "Ilumina el mecanismo del puente"
+          : bridgeStep === 3
+            ? "¡Tira del mecanismo con la liana!"
+            : carrying
+              ? solo
+                ? "¡Vuelve a la entrada!"
+                : "¡Regresen juntos a la entrada!"
+              : g.flag.state === FlagState.DROPPED
+                ? "Recupera la reliquia caída"
+                : g.sealOpen()
+                  ? "¡Busca la reliquia!"
+                  : "Activa las runas de jade";
+    $("flag-status").textContent =
+      bridgeStep === 1
+        ? "Ponte tras la estatua y esquiva al ver el aviso"
+        : bridgeStep === 2
+          ? "Acércate al mecanismo y pulsa E"
+          : bridgeStep === 3
+            ? solo
+              ? "Q · liana"
+              : "Rojo: ENTER · liana"
+            : carrying
+              ? solo
+                ? "◆ La llevas contigo · el campamento ya no cura"
+                : `◆ La lleva ${g.flag.carrier === 0 ? "azul · F" : "rojo · L"} para pasar`
+              : g.sealOpen()
+                ? "◆ Sello abierto · contacto o liana para recoger"
+                : "◆ Quédate cerca de cada runa para activarla";
+    $("rune-count").textContent = bridge
+      ? bridge.open
+        ? "◇ PUENTE ABIERTO"
+        : `◇ PUENTE · PASO ${bridgeStep}/3`
+      : `◇ RUNAS ${g.runes.filter((r) => r.active).length}/${g.runes.length}`;
     $("relic-count").textContent =
       `✦ TESOROS ${g.relics.filter((r) => r.collected).length}/3`;
     $("mission-clock").textContent = formatTime(g.stats.time);
     $("hud").classList.toggle("alarm", g.alarm);
+    $("hud").classList.toggle("solo", solo);
+    $("player-two-panel").hidden = solo;
+    $("player-one-role").textContent = solo
+      ? "EXPLORADOR · DOS HERRAMIENTAS"
+      : "AZUL · LINTERNA";
+    $("lives-label").textContent = solo ? "CORAZONES" : "INTENTOS COMPARTIDOS";
+    const lives = solo ? g.players[0].hearts : g.attempts;
     $("attempts").setAttribute(
       "aria-label",
-      `${g.attempts} intentos compartidos`,
+      `${lives} ${solo ? "corazones" : "intentos compartidos"}`,
     );
     [...$("attempts").children].forEach((crystal, i) =>
-      crystal.classList.toggle("spent", i >= g.attempts),
+      crystal.classList.toggle("spent", i >= lives),
     );
+    const cooldown = (value) => (value > 0 ? `${value.toFixed(1)}s` : "LISTA");
     for (const p of g.players) {
-      const label =
-        p.state === PlayerState.CAPTURED
-          ? "¡ATRAPADO! · ACÉRCATE"
-          : p.state === PlayerState.HIDDEN
-            ? "OCULTO ENTRE LAS HOJAS"
-            : p.protection > 0
-              ? "PROTECCIÓN MÁGICA"
-              : p.id === 0
-                ? "W A S D"
-                : g.mode === 1
-                  ? p.aiState === "RESCUE"
-                    ? "VOY A RESCATARTE"
-                    : "COMPAÑERO IA"
+      const first = p.id === 0,
+        captured = p.state === PlayerState.CAPTURED;
+      $(first ? "player-one-status" : "player-two-status").textContent =
+        captured
+          ? "¡ATRAPADO! · RUEDA HACIA TU COMPAÑERO"
+          : p.campProgress > 0
+            ? `CURANDO · ${Math.ceil(2 - p.campProgress)}s`
+            : p.state === PlayerState.HIDDEN
+              ? "OCULTO ENTRE LAS HOJAS"
+              : p.protection > 0
+                ? "PROTECCIÓN MÁGICA"
+                : first
+                  ? "W A S D"
                   : "↑ ← ↓ →";
-      $(p.id === 0 ? "dash-one" : "dash-two").textContent =
-        p.id === 1 && g.mode === 1
-          ? "ESQUIVA AUTOMÁTICA"
-          : `${p.id === 0 ? "ESPACIO" : "SHIFT DER."} · ${p.dashCooldown > 0 ? `RECARGA ${p.dashCooldown.toFixed(1)}s` : "IMPULSO LISTO"}`;
-      $(p.id === 0 ? "player-one-status" : "player-two-status").textContent =
-        label;
+      $(first ? "dash-one" : "dash-two").textContent =
+        `${first ? "ESPACIO" : "SHIFT DER."} · ${captured ? "IMPULSO NO DISPONIBLE" : p.dashCooldown > 0 ? `RECARGA ${p.dashCooldown.toFixed(1)}s` : "IMPULSO LISTO"}`;
+      $(first ? "tools-one" : "tools-two").textContent = captured
+        ? "Acérquense y esperen para rescatar"
+        : solo
+          ? `E LUZ ${cooldown(p.lightCooldown)} · Q LIANA ${cooldown(p.vineCooldown)}`
+          : first
+            ? `E LUZ ${cooldown(p.lightCooldown)} · F PASE`
+            : `ENTER LIANA ${cooldown(p.vineCooldown)} · L PASE`;
     }
     const toastVisible = g.messageTimer > 0 && state === GameState.PLAYING;
     $("toast").hidden = !toastVisible;
@@ -247,7 +290,9 @@ export class UI {
           completed = state === GameState.MISSION_COMPLETE,
           lost = state === GameState.GAME_OVER;
         $("state-eyebrow").textContent = won
-          ? "EL SECRETO ESTABA EN HACERLO JUNTOS"
+          ? solo
+            ? "EL SECRETO ESTABA EN SEGUIR EXPLORANDO"
+            : "EL SECRETO ESTABA EN HACERLO JUNTOS"
           : completed
             ? `MISIÓN ${g.missionIndex + 1} DE 5 · ${g.map.mission.name.toUpperCase()}`
             : lost
@@ -261,17 +306,21 @@ export class UI {
               ? "¡MISIÓN FALLIDA!"
               : "Aventura en pausa";
         $("state-description").textContent = won
-          ? "¡Cinco banderas recuperadas y cinco mapas explorados juntos!"
+          ? solo
+            ? "¡Cinco reliquias recuperadas con tu ingenio y tus dos herramientas!"
+            : "¡Cinco reliquias recuperadas en equipo!"
           : completed
-            ? `¡Recuperaron la bandera! Sigue ${MISSIONS[g.missionIndex + 1].name}, con tres nuevos intentos.`
+            ? `¡Reliquia recuperada! Sigue ${MISSIONS[g.missionIndex + 1].name}, con ${solo ? "tres corazones" : "tres nuevos intentos"}.`
             : lost
-              ? `Pueden reintentar ${g.map.mission.name} sin volver a la primera misión.`
-              : "La selva puede esperar. Continúen cuando estén listos.";
+              ? `${solo ? "Puedes" : "Pueden"} reintentar ${g.map.mission.name} desde el comienzo de esta misión.`
+              : solo
+                ? "La selva puede esperar. Continúa cuando estés listo."
+                : "La selva puede esperar. Continúen cuando estén listos.";
         const result = g.result;
         $("result-stats").hidden = !(won || completed) || !result;
         if ((won || completed) && result)
           $("result-stats").innerHTML =
-            `<div class="result-stars" aria-label="${result.stars} de 3 estrellas">${"★".repeat(result.stars)}<span>${"☆".repeat(3 - result.stars)}</span></div><div class="result-metrics"><span><b>${result.score}</b>PUNTOS</span><span><b>${formatTime(result.time)}</b>TIEMPO</span><span><b>${result.relics}/3</b>TESOROS</span><span><b>${result.captures}</b>CAPTURAS</span></div><small>${result.clean ? "★ Expedición limpia" : "☆ Expedición limpia: sin perder intentos, máximo 2 capturas"} · ${result.relics === 3 ? "★ Todos los tesoros" : "☆ Encuentra los 3 tesoros"}</small>`;
+            `<div class="result-stars" aria-label="${result.stars} de 3 estrellas">${"★".repeat(result.stars)}<span>${"☆".repeat(3 - result.stars)}</span></div><div class="result-metrics"><span><b>${result.score}</b>PUNTOS</span><span><b>${formatTime(result.time)}</b>TIEMPO</span><span><b>${result.relics}/3</b>TESOROS</span><span><b>${result.captures}</b>${solo ? "GOLPES" : "CAPTURAS"}</span></div><small>${result.clean ? "★ Expedición limpia" : solo ? "☆ Expedición limpia: máximo 1 golpe" : "☆ Expedición limpia: sin perder intentos, máximo 2 capturas"} · ${result.relics === 3 ? "★ Todos los tesoros" : "☆ Encuentra los 3 tesoros"}</small>${solo ? "" : `<small>${result.passes} ${result.passes === 1 ? "pase" : "pases"} · ${result.combos} ${result.combos === 1 ? "combo" : "combos"} · ${result.rescues} ${result.rescues === 1 ? "rescate" : "rescates"}</small>`}`;
         $("state-primary").textContent = won
           ? "Volver a jugar →"
           : completed
@@ -291,11 +340,11 @@ export class UI {
     const victory = [GameState.VICTORY, GameState.MISSION_COMPLETE].includes(
       this.game.state,
     );
-    for (let i = 0; i < 2; i++)
+    for (let i = 0; i < this.game.players.length; i++)
       drawSprite(
         c,
         "explorer",
-        62 + i * 56,
+        this.game.mode === 1 ? 90 : 62 + i * 56,
         72 - (victory ? Math.abs(Math.sin(time * 5 + i)) * 7 : 0),
         { red: i === 1, scale: 2, frame: victory ? Math.floor(time * 4) : 0 },
       );
@@ -304,7 +353,10 @@ export class UI {
         c.fillStyle = ["#d3c47f", "#91ccb2", "#d99475"][i % 3];
         c.fillRect((i * 47) % 180, (time * 18 + i * 11) % 70, 2, 3);
       }
-    } else if (this.game.state === GameState.GAME_OVER) {
+    } else if (
+      this.game.state === GameState.GAME_OVER &&
+      this.game.mode === 2
+    ) {
       c.strokeStyle = "#8cd2e2";
       for (const x of [62, 118]) {
         c.beginPath();

@@ -1323,3 +1323,56 @@ kbd {
     gap: 7px;
   }
 }
+
+/* Distinct tools and resources for one or two explorers. */
+.hud.solo .crystal {
+  width: 20px;
+  height: 20px;
+  clip-path: polygon(
+    50% 24%,
+    65% 7%,
+    85% 7%,
+    100% 24%,
+    100% 48%,
+    50% 100%,
+    0 48%,
+    0 24%,
+    15% 7%,
+    35% 7%
+  );
+  background: linear-gradient(135deg, #ffb79b, #e4716c);
+}
+.hud.solo .crystal.spent {
+  background: #365244;
+}
+.player-info .tool-status {
+  color: #e2d8a4;
+  letter-spacing: 0.3px;
+}
+.key-block > small {
+  display: block;
+  font-size: 10px;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+.how-modal {
+  max-height: 96%;
+  overflow: auto;
+}
+#result-stats > small {
+  display: block;
+}
+@media (min-width: 701px) {
+  .player-info {
+    padding: 6px 9px;
+  }
+  .players-info {
+    gap: 12px;
+  }
+  .player-info small {
+    font-size: 8px;
+  }
+  .mission {
+    max-width: 420px;
+  }
+}

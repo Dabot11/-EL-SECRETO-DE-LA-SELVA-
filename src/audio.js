@@ -224,6 +224,38 @@ export class Soundtrack {
       let notes,
         duration = 0.15;
       switch (event.type) {
+        case "light":
+          notes = [81, 93];
+          duration = 0.11;
+          break;
+        case "vine":
+          notes = [62, 74];
+          duration = 0.08;
+          break;
+        case "combo":
+          notes = [74, 81, 86];
+          duration = 0.16;
+          break;
+        case "pass":
+          notes = [81, 86];
+          duration = 0.09;
+          break;
+        case "statue":
+          notes = [50, 62, 74];
+          duration = 0.22;
+          break;
+        case "bridge":
+          notes = [62, 69, 74, 81];
+          duration = 0.26;
+          break;
+        case "hurt":
+          notes = [62, 57];
+          duration = 0.15;
+          break;
+        case "heal":
+          notes = [74, 81, 86];
+          duration = 0.24;
+          break;
         case "rune":
           notes = [74, 81, 86, 93];
           duration = 0.26;

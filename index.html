@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#102c26" />
     <meta
       name="description"
-      content="Una aventura cooperativa de David y Tavito. Explora cinco mapas distintos, esquiva guardianes y recupera la bandera junto a tu compañero."
+      content="Una aventura de David y Tavito para uno o dos jugadores. Explora cinco mapas, combina luz y liana y recupera la reliquia de la selva."
     />
-    <title>El Secreto de la Selva · Una aventura cooperativa</title>
+    <title>El Secreto de la Selva · Una aventura para uno o dos</title>
     <link rel="icon" href="./assets/leaf.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -27,7 +27,7 @@
             ></span
           >
         </a>
-        <span class="edition"><i></i> PIXEL ART · AVENTURA 3.0</span>
+        <span class="edition"><i></i> PIXEL ART · AVENTURA 4.0</span>
       </header>
 
       <main>
@@ -74,27 +74,31 @@
           <section id="menu" class="menu-screen overlay">
             <div class="menu-copy">
               <div class="eyebrow">
-                <span class="tiny-star">✦</span> UNA AVENTURA COOPERATIVA
+                <span class="tiny-star">✦</span> UN SECRETO. DOS FORMAS DE
+                EXPLORAR.
               </div>
               <h1>
                 EL SECRETO<br />DE LA <span>SELVA</span
                 ><span class="title-dot">.</span>
               </h1>
               <p>
-                Cinco mapas. Una bandera mágica.<br />Y una aventura que solo
-                termina juntos.
+                Un explorador con todos los recursos.<br />O dos amigos que se
+                necesitan.
               </p>
               <div class="menu-buttons">
                 <button id="play-solo" class="button primary">
                   <span class="button-icon" aria-hidden="true">1</span
-                  ><span>Jugar solo<small>CON UN COMPAÑERO IA</small></span
+                  ><span
+                    >Jugar solo<small
+                      >LINTERNA + LIANA · 3 CORAZONES</small
+                    ></span
                   ><span class="arrow" aria-hidden="true">→</span>
                 </button>
                 <button id="play-duo" class="button secondary">
                   <span class="button-icon" aria-hidden="true">2</span
                   ><span
                     >Jugar de a dos<small
-                      >UN TECLADO, DOS EXPLORADORES</small
+                      >DOS HERRAMIENTAS, UN EQUIPO</small
                     ></span
                   ><span class="arrow" aria-hidden="true">→</span>
                 </button>
@@ -111,8 +115,7 @@
               </button>
             </div>
             <div class="scene-caption">
-              <span class="caption-line"></span> HAY SECRETOS QUE SE DESCUBREN
-              EN EQUIPO.
+              <span class="caption-line"></span> EL PUENTE DEL JAGUAR TE ESPERA.
             </div>
           </section>
 
@@ -120,7 +123,7 @@
             <div class="hud-top">
               <div class="mission">
                 <small id="mission-progress">MISIÓN 1 DE 5</small
-                ><strong id="objective">Encuentra la bandera</strong
+                ><strong id="objective">Encuentra la reliquia</strong
                 ><span id="flag-status">⚑ En el pedestal</span>
                 <div class="mission-counters">
                   <span id="rune-count"></span><span id="relic-count"></span
@@ -128,7 +131,7 @@
                 </div>
               </div>
               <div class="team-attempts">
-                <small>INTENTOS COMPARTIDOS</small>
+                <small id="lives-label">CORAZONES</small>
                 <div id="attempts" aria-label="3 intentos compartidos">
                   <i class="crystal"></i><i class="crystal"></i
                   ><i class="crystal"></i>
@@ -145,12 +148,13 @@
                     aria-hidden="true"
                   ></canvas
                   ><span
-                    ><strong>EXPLORADOR 1</strong
+                    ><strong id="player-one-role">EXPLORADOR</strong
                     ><small id="player-one-status">W A S D</small
+                    ><small id="tools-one" class="tool-status"></small
                     ><small id="dash-one"></small
                   ></span>
                 </div>
-                <div class="player-info red">
+                <div class="player-info red" id="player-two-panel">
                   <canvas
                     id="portrait-red"
                     width="40"
@@ -158,8 +162,9 @@
                     aria-hidden="true"
                   ></canvas
                   ><span
-                    ><strong>EXPLORADOR 2</strong
-                    ><small id="player-two-status">COMPAÑERO IA</small
+                    ><strong>ROJO · LIANA</strong
+                    ><small id="player-two-status">↑ ← ↓ →</small
+                    ><small id="tools-two" class="tool-status"></small
                     ><small id="dash-two"></small
                   ></span>
                 </div>
@@ -191,24 +196,28 @@
           >
             <div class="modal how-modal">
               <span class="eyebrow">ANTES DE ENTRAR AL TEMPLO</span>
-              <h2 id="how-title">La aventura es juntos.</h2>
+              <h2 id="how-title">Tu aventura, a tu manera.</h2>
               <p class="modal-intro">
-                Activen las runas, recuperen la bandera roja y regresen
-                <strong>los dos</strong> a la entrada.
+                Recupera la reliquia y vuelve a la entrada. En dúo deben
+                regresar <strong>los dos, libres</strong>.
               </p>
               <div class="controls-grid">
                 <div>
-                  <span class="blue-label">EXPLORADOR 1</span>
+                  <span class="blue-label">SOLO / AZUL</span>
                   <div class="key-block">
                     <kbd>W</kbd><br /><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd
-                    ><small class="dash-key">Impulso: ESPACIO</small>
+                    ><small class="dash-key">ESPACIO · impulso</small
+                    ><small
+                      >E · linterna<br />Solo: Q · liana / Dúo: F · pase</small
+                    >
                   </div>
                 </div>
                 <div>
-                  <span class="red-label">EXPLORADOR 2</span>
+                  <span class="red-label">ROJO · SOLO EN DÚO</span>
                   <div class="key-block">
                     <kbd>↑</kbd><br /><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd
-                    ><small class="dash-key">Impulso: SHIFT DERECHO</small>
+                    ><small class="dash-key">SHIFT DERECHO · impulso</small
+                    ><small>ENTER · liana<br />L · pase de la reliquia</small>
                   </div>
                 </div>
               </div>
@@ -216,35 +225,37 @@
                 <p>
                   <b>01</b
                   ><span
-                    ><strong>Escóndanse en los arbustos.</strong> Los guardianes
-                    no pueden verlos allí.</span
+                    ><strong>El puente del jaguar.</strong> Atrae su salto hacia
+                    la estatua. Después ilumina el mecanismo y tira con la
+                    liana. En los otros mapas, activa las runas.</span
                   >
                 </p>
                 <p>
                   <b>02</b
                   ><span
-                    ><strong>Rescaten a su compañero.</strong> Acérquense a su
-                    burbuja y permanezcan cerca hasta llenar la barra.</span
+                    ><strong>Solo: tú tienes las dos herramientas.</strong> Tres
+                    corazones por misión. Descansa 2 segundos en la entrada para
+                    curarte, antes de recoger la reliquia.</span
                   >
                 </p>
                 <p>
                   <b>03</b
                   ><span
-                    ><strong>Cuiden sus tres intentos.</strong> Tienen tres por
-                    misión. Solo pierden uno si ambos quedan atrapados.</span
+                    ><strong>Dúo: combinen sus habilidades.</strong> Luz + liana
+                    inmoviliza guardianes. Pasa la reliquia al compañero cercano
+                    con F / L, sin muros en medio.</span
                   >
                 </p>
               </div>
               <p class="auto-note">
-                Evita las zonas de ataque iluminadas. Los tesoros dorados son
-                opcionales.
+                ¿Atrapado en dúo? Rueda hacia tu compañero con las teclas de
+                movimiento. La liana puede acercar la burbuja; permanezcan
+                juntos hasta completar el rescate. Si ambos caen, pierden uno de
+                sus 3 intentos.
               </p>
               <p class="auto-note">
-                Las runas se activan al quedarte cerca un instante.<br />Muévete
-                + impulso para esquivar; recarga en 3,5 segundos.<br /><small
-                  >En modo solo, el compañero te sigue y viene a
-                  rescatarte.</small
-                >
+                Los arbustos ocultan. Las zonas iluminadas avisan de ataques.
+                Muévete + impulso para esquivar. Los 3 tesoros son opcionales.
               </p>
               <button id="close-how" class="button primary compact">
                 ¡Entendido! <span>→</span>
@@ -295,7 +306,7 @@
             <label class="route-mode-label"
               >Récords
               <select id="route-mode">
-                <option value="1">Solo + IA</option>
+                <option value="1">Un jugador</option>
                 <option value="2">Dos jugadores</option>
               </select></label
             >
@@ -303,9 +314,10 @@
           <p id="save-status" class="campaign-note"></p>
           <ol id="mission-route" class="mission-route"></ol>
           <p class="campaign-note">
-            Tres estrellas: terminar · encontrar los 3 tesoros · terminar sin
-            perder intentos y con un máximo de 2 capturas. Repite una misión
-            desde el menú para mejorar tu récord.
+            Tres estrellas: completar · reunir los 3 tesoros · expedición
+            limpia. Solo: máximo 1 golpe. Dúo: sin perder intentos y máximo 2
+            capturas. Los desbloqueos anteriores se conservan; esta aventura
+            estrena récords.
           </p>
         </section>
         <section class="bestiary" aria-label="Conoce a los guardianes">
@@ -374,8 +386,8 @@
           <div class="adventure-note">
             <span class="note-icon flag-icon">⚑</span>
             <div>
-              <h3>Vuelvan con el secreto</h3>
-              <p>Una bandera. Dos exploradores. Juntos.</p>
+              <h3>De vuelta con el secreto</h3>
+              <p>Solo: vuelve a salvo. Dúo: regresen juntos.</p>
             </div>
           </div>
         </div>
@@ -387,7 +399,7 @@
         <span
           >UNA IDEA DE DAVID Y TAVITO <span class="footer-star">✦</span> HECHA
           PARA EXPLORAR</span
-        ><span>5 MISIONES <span class="footer-divider">/</span> V.3.0</span>
+        ><span>5 MISIONES <span class="footer-divider">/</span> V.4.0</span>
       </footer>
     </div>
     <script type="module" src="./src/main.js"></script>

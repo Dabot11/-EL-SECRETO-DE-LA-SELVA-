@@ -8,7 +8,7 @@ export const TILE = Object.freeze({
   BUSH: "b",
   BASE: "s",
 });
-export function createMap(index = 0) {
+export function createMap(index = 0, mode = 2) {
   if (!Number.isInteger(index) || !MISSIONS[index])
     throw new RangeError("Misión inválida");
   const mission = { ...MISSIONS[index], ...CHALLENGES[index] },
@@ -34,6 +34,8 @@ export function createMap(index = 0) {
   return {
     width,
     height,
+    mode,
+    revision: 0,
     cells,
     mission,
     index,

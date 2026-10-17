@@ -18,7 +18,7 @@ import {
   canTravelStraight,
   projectVector,
 } from "../src/collisions.js";
-import { canDetect, updateGuard, updateCompanion } from "../src/ai.js";
+import { canDetect, updateGuard } from "../src/ai.js";
 import { playJourney } from "./journey.js";
 
 function game(mode = 2) {
@@ -179,7 +179,7 @@ test("guardia recorre PATROL → CHASE → SEARCH → RETURN → PATROL", () => 
   assert.equal(guard.state, GuardState.PATROL);
 });
 
-test("un golpe anunciado captura e inmoviliza sin gastar un intento", () => {
+test("un golpe anunciado captura y permite rodar sin gastar un intento", () => {
   const g = game();
   position(g.players[0], 5.5, 5.5);
   Object.assign(g.guards[0], { x: 5.5, y: 5.5, attackCooldown: 0 });
@@ -193,7 +193,7 @@ test("un golpe anunciado captura e inmoviliza sin gastar un intento", () => {
     { x: 1, y: 1 },
     { x: 0, y: 0 },
   ]);
-  assert.equal(distance(before, g.players[0]), 0);
+  assert.ok(distance(before, g.players[0]) > 0);
   assert.equal(g.capture(g.players[0]), false);
 });
 
@@ -240,49 +240,10 @@ test("no hay liberación por tiempo ni rescate a través de un muro", () => {
   assert.equal(g.players[0].state, PlayerState.CAPTURED);
 });
 
-test("la IA navega por el puente hasta rescatar al humano sin teletransportarse", () => {
-  const g = game(1);
-  g.guards = [];
-  position(g.players[0], 10.5, 4.5);
-  position(g.players[1], 6.5, 4.5);
-  g.capture(g.players[0]);
-  let previous = { ...g.players[1] };
-  for (
-    let i = 0;
-    i < 1800 && g.players[0].state === PlayerState.CAPTURED;
-    i++
-  ) {
-    g.update(1 / 60);
-    assert.ok(canOccupy(g.map, g.players[1].x, g.players[1].y));
-    const delta = projectVector(
-      g.players[1].x - previous.x,
-      g.players[1].y - previous.y,
-    );
-    assert.ok(Math.hypot(delta.x, delta.y) <= CONFIG.playerSpeed / 60 + 0.001);
-    previous = { ...g.players[1] };
-  }
-  assert.notEqual(g.players[0].state, PlayerState.CAPTURED);
-  assert.equal(g.attempts, 3);
-});
-
-test("la IA se esconde con el humano y también puede ser capturada y rescatada", () => {
-  const g = game(1);
-  g.guards = [];
-  position(g.players[0], 3.5, 9.5);
-  position(g.players[1], 5.5, 9.5);
-  tick(g, 3);
-  assert.equal(g.players[1].state, PlayerState.HIDDEN);
-  position(g.players[1], 5.5, 11.5);
-  g.capture(g.players[1]);
-  assert.equal(g.players[1].state, PlayerState.CAPTURED);
-  position(g.players[0], 5.9, 11.5);
-  tick(g, 0.65);
-  assert.equal(g.players[1].state, PlayerState.PROTECTED);
-});
-
 test("la bandera se recoge por contacto y solo tiene un portador", () => {
   const g = game();
   g.runes.forEach((r) => (r.active = true));
+  g.openBridge();
   g.guards = [];
   for (const p of g.players) position(p, g.map.pedestal.x, g.map.pedestal.y);
   g.update(0.01);
@@ -297,6 +258,7 @@ test("la bandera se recoge por contacto y solo tiene un portador", () => {
 test("capturar al portador deja bandera accesible y el compañero puede recogerla", () => {
   const g = game();
   g.runes.forEach((r) => (r.active = true));
+  g.openBridge();
   g.guards = [];
   position(g.players[0], 14.5, 2.5);
   g.collectFlag();
@@ -316,6 +278,7 @@ test("capturar al portador deja bandera accesible y el compañero puede recogerl
 test("captura doble resta exactamente un intento y reinicia todo el nivel", () => {
   const g = game();
   g.runes.forEach((r) => (r.active = true));
+  g.openBridge();
   position(g.players[0], 14.5, 2.5);
   g.collectFlag();
   g.players.forEach((p) => g.capture(p));
@@ -370,15 +333,6 @@ test("la victoria exige bandera, ambos libres y ambos en la entrada", () => {
   assert.equal(g.state, GameState.MISSION_COMPLETE);
 });
 
-test("el compañero IA completa el regreso a la base", () => {
-  const g = game(1);
-  g.guards = [];
-  Object.assign(g.flag, { state: FlagState.CARRIED, carrier: 0 });
-  position(g.players[1], 6.5, 10.5);
-  tick(g, 10);
-  assert.equal(g.state, GameState.MISSION_COMPLETE);
-});
-
 test("pausar congela lógica, movimiento, guardianes y protección", () => {
   const g = game();
   g.togglePause();
@@ -421,11 +375,12 @@ test("la navegación física recorre ida y vuelta sin atascarse ni atravesar obs
 });
 
 for (const mode of [1, 2])
-  test(`partida completa, modo ${mode}: runas, evasión, bandera y victoria con guardianes activos`, () => {
+  test(`partida completa, modo ${mode}: estatua, herramientas, evasión, reliquia y victoria con guardianes activos`, () => {
     const result = playJourney(new Game(), mode);
     assert.equal(result.state, GameState.MISSION_COMPLETE);
     assert.ok(result.attempts > 0);
-    assert.equal(result.runes, 1);
+    assert.equal(result.runes, 0);
+    assert.equal(result.bridge, true);
     assert.ok(result.dashes > 0);
     assert.ok(result.flags > 0);
   });

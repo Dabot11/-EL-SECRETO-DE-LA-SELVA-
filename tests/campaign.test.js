@@ -37,7 +37,7 @@ test("la dificultad aumenta sin guardianes más rápidos que el jugador", () => 
     assert.ok(g.guards.every((guard) => guard.speed < CONFIG.playerSpeed));
     if (previous) {
       assert.ok(g.guards.length >= previous.guards.length);
-      assert.ok(g.guards[0].speed > previous.guards[0].speed);
+      assert.ok(g.map.mission.speed > previous.map.mission.speed);
       assert.ok(g.guards[0].detectionRange > previous.guards[0].detectionRange);
       assert.ok(g.guards[0].searchTime > previous.guards[0].searchTime);
     }

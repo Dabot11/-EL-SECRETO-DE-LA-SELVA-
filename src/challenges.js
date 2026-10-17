@@ -5,14 +5,22 @@ export const CHALLENGES = [
     speed: 25,
     par: 65,
     briefing:
-      "Activa la runa de jade, recupera la bandera y vuelve. Los tres tesoros son opcionales.",
-    runes: [[5, 2]],
+      "Atrae al jaguar hacia la estatua, ilumina el mecanismo y abre el puente con la liana.",
+    runes: [],
+    bridge: {
+      statue: { x: 6.5, y: 5.5 },
+      winch: { x: 7.5, y: 9.5 },
+      tiles: [
+        [8, 4],
+        [8, 10],
+      ],
+    },
     relics: [
       [2, 2],
       [10, 11],
       [15, 9],
     ],
-    enemyTypes: ["stone", "stone", "spirit"],
+    enemyTypes: ["hunter", "stone", "spirit"],
     traps: [],
   },
   {

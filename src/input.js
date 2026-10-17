@@ -8,7 +8,15 @@ const MOVE_KEYS = new Set([
   "ArrowLeft",
   "ArrowRight",
 ]);
-const DASH_KEYS = new Set(["Space", "ShiftRight"]);
+const ACTION_KEYS = new Set([
+  "Space",
+  "ShiftRight",
+  "KeyE",
+  "KeyQ",
+  "KeyF",
+  "Enter",
+  "KeyL",
+]);
 export class Input {
   constructor(onPause, onBlur, isPlaying = () => true) {
     this.keys = new Set();
@@ -31,12 +39,12 @@ export class Input {
         this.keys.add(e.code);
       }
       if (
-        e.code === "Space" &&
+        (e.code === "Space" || e.code === "Enter") &&
         e.target instanceof Element &&
         e.target.closest("button,a,summary")
       )
         return;
-      if (DASH_KEYS.has(e.code)) {
+      if (ACTION_KEYS.has(e.code)) {
         e.preventDefault();
         if (!e.repeat) this.actions.add(e.code);
       }
@@ -66,11 +74,16 @@ export class Input {
         x: k("KeyD") - k("KeyA"),
         y: k("KeyS") - k("KeyW"),
         dash: this.actions.has("Space"),
+        light: this.actions.has("KeyE"),
+        vine: this.actions.has("KeyQ"),
+        pass: this.actions.has("KeyF"),
       },
       {
         x: k("ArrowRight") - k("ArrowLeft"),
         y: k("ArrowDown") - k("ArrowUp"),
         dash: this.actions.has("ShiftRight"),
+        vine: this.actions.has("Enter"),
+        pass: this.actions.has("KeyL"),
       },
     ];
     this.actions.clear();

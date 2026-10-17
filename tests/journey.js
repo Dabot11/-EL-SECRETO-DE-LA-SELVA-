@@ -53,40 +53,61 @@ export function playJourney(
     let target =
       objectives[0] ??
       (game.flag.state === "CARRIED" ? game.map.base : game.flag);
-    if (b.state === "CAPTURED") target = b;
+    if (game.bridge && !game.bridge.open)
+      target = game.bridge.charged ? game.bridge.winch : game.bridge.statue;
+    if (b?.state === "CAPTURED") target = b;
     const companionTarget =
       a.state === "CAPTURED"
         ? a
         : game.flag.state === "CARRIED" && distance(a, game.map.base) < 1.5
           ? game.map.base
           : a;
-    let second =
-      distance(a, b) < 0.5 && a.state !== "CAPTURED"
-        ? { x: 0, y: 0 }
-        : steer(game, b, companionTarget);
-    let first = steer(game, a, target);
-    for (const [player, destination, index] of [
-      [a, target, 0],
-      [b, companionTarget, 1],
-    ]) {
+    if (a.state === "CAPTURED") target = b;
+    const inputs = game.players.map((player, index) => {
+      const destination = index === 0 ? target : companionTarget;
+      let input =
+        distance(player, destination) < 0.25
+          ? { x: 0, y: 0 }
+          : steer(game, player, destination);
       if (
-        player.protection <= 0 &&
         player.state !== "CAPTURED" &&
         player.state !== "HIDDEN" &&
+        player.protection <= 0 &&
         dangerAt(game, player, 0.15)
       ) {
         const escape = escapeTarget(game, player, destination);
-        if (escape) {
-          const direction = {
+        if (escape)
+          input = {
             ...steer(game, player, escape),
             dash: player.dashCooldown <= 0,
           };
-          if (index === 0) first = direction;
-          else second = direction;
-        }
+        // The first jaguar must actually hit the statue; interrupting its lunge would reset the puzzle.
+        if (!game.bridge || game.bridge.open) input.light = true;
       }
-    }
-    game.update(1 / 60, [first, second]);
+      if (
+        game.bridge?.charged &&
+        !game.bridge.open &&
+        distance(player, game.bridge.winch) < 2
+      ) {
+        input.light = true;
+        input.vine = true;
+      }
+      if (game.players.some((p) => p !== player && p.state === "CAPTURED"))
+        input.vine = true;
+      if (
+        game.guards.some((g) => g.markedTime > 0 && distance(player, g) < 2.5)
+      )
+        input.vine = true;
+      // One deliberate handoff on the way home; no endless pass loop or score farming.
+      if (
+        game.flag.carrier === player.id &&
+        game.stats.passes === 0 &&
+        game.flag.state === "CARRIED"
+      )
+        input.pass = true;
+      return input;
+    });
+    game.update(1 / 60, inputs);
     for (const player of game.players)
       if (!canOccupy(game.map, player.x, player.y))
         throw Error("Un explorador atravesó un obstáculo");
@@ -94,7 +115,7 @@ export function playJourney(
       if (!canOccupy(game.map, guard.x, guard.y))
         throw Error("Un guardián atravesó un obstáculo");
     for (const event of game.events) {
-      if (event.type === "capture") captures++;
+      if (event.type === "capture" || event.type === "hurt") captures++;
       if (event.type === "rescue") rescues++;
       if (event.type === "flag") flags++;
     }
@@ -117,5 +138,9 @@ export function playJourney(
     runes: game.runes.filter((r) => r.active).length,
     relics: game.relics.filter((r) => r.collected).length,
     dashes: game.stats.dashes,
+    hearts: game.players[0].hearts,
+    bridge: game.bridge?.open ?? null,
+    passes: game.stats.passes,
+    combos: game.stats.combos,
   };
 }

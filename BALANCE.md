@@ -1,69 +1,46 @@
-# Análisis y balance · versión 3
+# Diseño y balance · versión 4
 
-## Diagnóstico
+La modalidad individual necesitaba funcionar sin esperar a un compañero automático. El cooperativo necesitaba decisiones compartidas que fueran más allá de caminar juntos. Esta versión separa los recursos de supervivencia y las herramientas disponibles en cada modo, y prueba la nueva estructura con **El Puente del Jaguar**. Las cinco misiones reciben las herramientas y reglas de modalidad; las misiones 2–5 mantienen sus encuentros de runas.
 
-La versión 2 tenía una base cooperativa clara: dos exploradores, escondites, rescates y una salida compartida. Sus cinco mapas cambiaban de geometría y color, pero pedían siempre el mismo recorrido: ir a la bandera y volver. La velocidad de las patrullas subía sin añadir suficientes decisiones nuevas.
+## Decisiones
 
-El principal problema de balance era el rescate instantáneo. Un compañero muy próximo anulaba casi inmediatamente una captura; el controlador de prueba completaba cada mapa en 15,5–17,6 segundos con 5–8 capturas y los tres intentos intactos. Había mucho intercambio de capturas, pero poca consecuencia. Piedra y espíritu se diferenciaban principalmente por apariencia y velocidad. Al acabar faltaban objetivos opcionales, récords o progreso persistente que motivaran otra partida.
+| Problema                                     | Cambio                                                                         | Decisión que buscamos provocar                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| En solo, quedar atrapado y depender de la IA | Un personaje con tres corazones, linterna y liana                              | Elegir entre avanzar, esquivar, interrumpir o regresar a curarse |
+| Dos personajes haciendo lo mismo             | Azul ilumina; rojo usa liana                                                   | Preparar y ejecutar un combo, repartir responsabilidades         |
+| Portador fijo durante toda la vuelta         | Pases, ralentización al cargar y preferencia de los guardianes por el portador | Cambiar quién lleva y quién abre camino                          |
+| Jugador capturado sin nada que hacer         | La burbuja rueda; la liana la acerca                                           | Participar en el propio rescate                                  |
+| Primer objetivo demasiado parecido al resto  | Usar el salto del jaguar para cargar una estatua y abrir el puente             | Observar al monstruo y convertir su ataque en una solución       |
+| Herramienta que elige un objetivo frustrante | Rescate primero; mecanismo solo si está listo; marca de luz antes que tesoros  | Hacer predecible la respuesta de la liana                        |
 
-## Cambios implementados
+## Parámetros
 
-| Oportunidad                           | Cambio                                                                                    | Efecto buscado                                      |
-| ------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| Recorridos repetidos                  | 1, 2, 2, 3 y 3 runas distribuidas por los cinco mapas; sellan la bandera hasta activarlas | Explorar rutas y decidir el orden de objetivos      |
-| Poco incentivo para desviarse         | Tres tesoros opcionales por misión                                                        | Elegir entre avanzar o explorar un desvío           |
-| Capturas poco legibles                | Ataques con aviso, dirección o radio visible y recuperación                               | Poder anticipar y aprender de cada error            |
-| Monstruos demasiado parecidos         | Golpe de piedra, pulso del espíritu, salto del jaguar y gran golpe Solar                  | Exigir respuestas distintas sin añadir armas        |
-| Movimiento pasivo                     | Impulso corto con invulnerabilidad y recarga                                              | Dar una herramienta activa para escapar             |
-| Rescate automático trivial            | Canal de 0,6 segundos que se interrumpe al salir                                          | Requerir una ventana segura y cooperación           |
-| Captura inmediata después del rescate | Protección breve para ambos exploradores                                                  | Permitir salir juntos sin anular el riesgo previo   |
-| Persecuciones que acumulan guardianes | Territorio limitado y ataques próximos por turnos                                         | Mantener encuentros legibles y huecos para rescatar |
-| Cruces demasiado estrechos            | Puentes ampliados en misiones 2 y 5                                                       | Dar espacio para esquivar las nuevas embestidas     |
-| Regreso idéntico a la ida             | Alarma al tomar la bandera: persecución +12 % y música más rápida                         | Crear un cierre más tenso                           |
-| Pocas razones para repetir            | Tres estrellas, puntuación, mejores tiempos y selección de misiones                       | Premiar aprendizaje, exploración y partidas limpias |
-| Pérdida de avance al recargar         | Guardado por misión y modalidad                                                           | Permitir sesiones cortas y continuar después        |
+- Movimiento: 64 píxeles de pantalla/s. Portador: ×0,93 solo, ×0,78 dúo. Burbuja: 25 píxeles/s. Impulso: 150 píxeles/s durante 0,2 s, con 3,5 s de recarga.
+- Solo: tres corazones; cada golpe otorga 1,7 s de protección. Campamento: dos segundos continuos para recuperar corazones, únicamente antes de la alarma. Los golpes acumulados siguen contando para las estrellas.
+- Solo: un guardián menos, velocidad de patrulla ×0,92 y preparación de ataque ×1,15. No se elimina al Solar final.
+- Linterna: radio 2,3 casillas, recarga 5 s, interrupción 0,7 s. Marca de combo: 6 s solo / 4 s dúo.
+- Liana: alcance 3 casillas, recarga 4,5 s, interrupción 0,6 s o inmovilización 2,2 s si hay marca de luz. Un lanzamiento sin objetivo válido no gasta recarga.
+- Pase: alcance 4 casillas, espera entre pases 0,8 s, protección del receptor 0,45 s. El cambio de portador es inmediato; la animación dura 0,35 s. Agua permitida; muros bloquean.
+- Rescate: 0,6 s de proximidad; protección 1,5 s para el rescatado y 0,8 s para el rescatador. La liana requiere un trayecto transitable para acercar una burbuja.
+- Estatua: impacto de la trayectoria de salto a hasta 0,65 casillas. Recuperación del jaguar 2,5 s. El mecanismo permanece iluminado 8 s solo / 4 s dúo. Abrirlo mantiene disponibles ambos cruces hasta reiniciar.
+- Resto de encuentros: runas 0,65 s; territorio de guardián hasta tres casillas de su ruta; ataques próximos por turnos. Trampas con ciclo de 6,5 s, aviso de 1,3 s y frenado de 1,1 s.
 
-## Parámetros de partida
+Se mantienen los puntos por completar, tesoros y tiempo. Se descuentan 35 por golpe/captura y 200 por intento compartido perdido. Pases, combos y rescates no generan puntos repetibles. Estrellas sin límite de tiempo: completar, tres tesoros y expedición limpia. Solo admite hasta un golpe; dúo hasta dos capturas, sin perder un intento.
 
-- Movimiento normal: 64 píxeles de pantalla/s. Llevar la bandera reduce un 7 % esa velocidad. El suelo peligroso reduce temporalmente el movimiento al 62 %.
-- Impulso: 150 píxeles/s durante 0,2 s; recarga 3,5 s. La IA usa la misma habilidad y recarga. Mantener la tecla no repite la acción.
-- Runas: 0,65 s de permanencia; la carga parcial se interrumpe al alejarse.
-- Rescate: 0,6 s de permanencia; protección de 1,5 s para el rescatado y 0,8 s para quien lo libera.
-- Ataques: avisos de 0,7–1,25 s; recuperación de 1,25–1,8 s. El salto del jaguar dura 0,32 s, mantiene su dirección y se detiene ante obstáculos.
-- Patrullas: territorio de hasta tres casillas alrededor de sus puntos de ruta. Los guardianes separados por menos de tres casillas no inician ataques simultáneos.
-- Trampas: ciclo de 6,5 s, con 1,3 s de aviso antes de la fase activa. Frenan durante 1,1 s; no capturan por sí solas.
-- Tres intentos compartidos por misión. Solo se pierde uno si ambos están atrapados. No hay límite de tiempo.
+## Recorridos automatizados
 
-La puntuación parte de 1.000 puntos, suma 200 por tesoro y hasta cinco puntos por segundo ahorrado respecto al tiempo de referencia del mapa. Resta 35 por captura y 200 por intento perdido; mínimo 100. Los tiempos de referencia son 65, 90, 105, 120 y 140 segundos. El cronómetro acumula los intentos y se detiene al pausar. Rescatar no genera puntos adicionales.
+Controlador determinista de `tests/journey.js`, con guardianes activos, colisiones, herramientas con recarga y daño real. Dirige un personaje en solo y ambos en dúo. No teletransporta, desactiva enemigos ni concede invulnerabilidad. La estatua se carga mediante un salto real.
 
-Las estrellas son independientes del tiempo: terminar, recoger los tres tesoros y terminar con tres intentos y hasta dos capturas. Una ruta rápida no es obligatoria para obtener las tres.
+| Misión            | Solo, principal | Solo, tres tesoros | Dúo, principal | Dúo, tres tesoros |
+| ----------------- | --------------- | ------------------ | -------------- | ----------------- |
+| Puente del Jaguar | 23,3 s          | 35,7 s             | 25,2 s         | 36,4 s            |
+| Puentes del Río   | 23,7 s          | 31,1 s             | 24,4 s         | 32,4 s            |
+| Jardín            | 28,6 s          | 29,0 s             | 31,9 s         | 30,6 s            |
+| Luna              | 30,1 s          | 40,5 s             | 34,9 s         | 41,0 s            |
+| Santuario         | 30,5 s          | 35,0 s             | 44,1 s         | 67,3 s            |
 
-## Medición automatizada
+Los veinte escenarios terminan. En estas rutas el modo individual recibe cero golpes y el dúo sufre entre cero y dos capturas, con rescate. La automatización reacciona a los avisos inmediatamente: estos tiempos y resultados no representan a jugadores humanos ni demuestran que el juego sea más divertido. Un desvío puede evitar enemigos y acortar la ruta; la duración no tiene por qué crecer en cada caso.
 
-Resultados de `tests/journey.js` en Node, con movimiento, colisiones, guardianes, rescate y compañero IA reales. La versión 3 adapta el controlador a runas e impulso; por eso esta comparación describe los recorridos, **no demuestra una mejora de diversión ni equivale a tiempos de jugadores humanos**.
+## Calibración con David y Tavito
 
-| Misión    | v2 solo + IA | v3 solo + IA, ruta principal | v3 solo + IA, tres tesoros |
-| --------- | ------------ | ---------------------------- | -------------------------- |
-| Templo    | 16,2 s       | 20,2 s                       | 27,9 s                     |
-| Puentes   | 17,4 s       | 25,3 s                       | 34,3 s                     |
-| Jardín    | 16,4 s       | 25,6 s                       | 30,8 s                     |
-| Luna      | 16,9 s       | 38,1 s                       | 33,8 s                     |
-| Santuario | 17,6 s       | 30,5 s                       | 41,3 s                     |
-
-Los 20 escenarios —cinco mapas, dos modalidades, ruta principal o búsqueda de tres tesoros— terminan. En estos recorridos las capturas bajan a 0–2 por misión: el controlador evita los avisos y la IA elige salidas cercanas en vez de cruzar un ataque para seguir al humano. La progresión aumenta objetivos y combinaciones de enemigos; la dificultad efectiva también depende de la ruta elegida y no es estrictamente creciente en cada simulación.
-
-## Errores corregidos durante la revisión
-
-- Rescatadores capturados de inmediato sin margen para separarse del peligro.
-- Compañero que elegía una salida lejana de un ataque para permanecer cerca del humano.
-- IA que entraba en un área de ataque al intentar rescatar; ahora espera fuera hasta que aparece una ventana.
-- Penalización de velocidad por llevar la bandera que no se aplicaba al compañero IA.
-- Guardianes que perseguían entre regiones y se acumulaban en los pasos estrechos.
-- Embestida que podía deslizarse por una pared o sobrepasar el extremo anunciado con ciertos tiempos de cuadro.
-- Fragmento de arbusto incluido en el recorte del espíritu.
-- Escape ignorado cuando el control de volumen tenía el foco.
-- Espacio consumido como impulso cuando debía activar un botón enfocado.
-
-## Próxima calibración con David y Tavito
-
-Observar si identifican una runa sin ayuda, si entienden qué ataque los atrapó, si el compañero llega a rescatar y si desean repetir para buscar tesoros. La prueba con personas debe calibrar duración, avisos y frecuencia de capturas. La automatización comprueba que las reglas se cumplen y que las rutas se pueden completar; no mide por sí sola qué tan entretenido resulta el juego.
+La siguiente prueba útil es jugar la primera misión solos y después juntos. Observar si entienden dónde colocarse para dirigir al jaguar, si recuerdan la secuencia de herramientas, si los pases ayudan durante la vuelta y si el capturado sigue participando. Medir intentos, tiempo real y necesidad de ayuda antes de cambiar radios, recargas o extender encuentros específicos a los otros cuatro mapas.

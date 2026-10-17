@@ -85,7 +85,7 @@ with sync_playwright() as playwright:
     page.wait_for_timeout(80)
     page.keyboard.up('ArrowRight')
     check("Impulso rojo independiente con Shift derecho",page.evaluate("app.game.stats.dashes===2 && app.game.players[1].dashCooldown>0"))
-    check("HUD muestra runas, tesoros y recarga", 'RUNAS 0/1' in page.locator('#rune-count').inner_text() and 'TESOROS' in page.locator('#relic-count').inner_text() and 'RECARGA' in page.locator('#dash-two').inner_text())
+    check("HUD muestra runas, tesoros y recarga", 'PASO 1/3' in page.locator('#rune-count').inner_text() and 'TESOROS' in page.locator('#relic-count').inner_text() and 'RECARGA' in page.locator('#dash-two').inner_text())
 
     # Deterministic interaction fixtures exercise the rendered game and HUD.
     page.evaluate("""() => {
@@ -94,7 +94,7 @@ with sync_playwright() as playwright:
     }""")
     check("Escondite sin tecla de interacción", page.evaluate("app.game.players[0].state === 'HIDDEN'") and "OCULTO" in page.locator("#player-one-status").inner_text())
     page.evaluate("""() => {
-      const g=app.game;g.runes.forEach(r=>r.active=true);
+      const g=app.game;g.runes.forEach(r=>r.active=true);g.openBridge();
       Object.assign(g.players[0],{x:14.5,y:2.5,protection:0,state:'NORMAL'});g.collectFlag();g.capture(g.players[0]);app.ui.update();
     }""")
     check("Captura, burbuja y bandera caída", page.evaluate("app.game.players[0].state === 'CAPTURED' && app.game.flag.state === 'DROPPED'") and "caída" in page.locator("#objective").inner_text())
@@ -122,6 +122,57 @@ with sync_playwright() as playwright:
     page.locator("#play-solo").click()
     check("Selección de modo individual", page.evaluate("app.game.mode === 1 && app.game.state === 'PLAYING'"))
 
+    check("Solo muestra un explorador y tres corazones",page.evaluate("app.game.players.length===1 && app.game.players[0].hearts===3") and page.locator('#player-two-panel').is_hidden() and page.locator('#lives-label').inner_text()=='CORAZONES')
+    page.screenshot(path=str(OUTPUT / "solo-v4.png"),full_page=True)
+    page.evaluate("() => {app.game.guards=[];Object.assign(app.game.players[0],{x:5.5,y:11.5,protection:0,state:'NORMAL'});app.game.capture(app.game.players[0]);app.ui.update();}")
+    check("El HUD descuenta un corazón sin burbuja",page.locator('#attempts .spent').count()==1 and page.evaluate("app.game.players[0].state==='PROTECTED'"))
+    # Real key events exercise both tools, combos, relic passes and no auto-repeat.
+    page.evaluate("""() => {
+      const g=app.game;g.start(2,1);g.relics=[];g.traps=[];g.guards=[g.guards[0]];
+      g.map.cells=g.map.cells.map((row,y)=>row.map((t,x)=>x===0||y===0||x===17||y===13?'#':'.'));g.map.revision++;
+      Object.assign(g.players[0],{x:6.5,y:6.5,protection:9});Object.assign(g.players[1],{x:7,y:6.5,protection:9});
+      Object.assign(g.guards[0],{x:8,y:6.5,state:'STUNNED',stunTime:9});app.input.clear();
+    }""")
+    page.locator('#game-canvas').focus()
+    page.keyboard.press('e')
+    page.wait_for_timeout(70)
+    check("E activa la linterna azul y marca al guardián",page.evaluate("app.game.stats.lights===1 && app.game.guards[0].markedTime>0"))
+    page.keyboard.press('Enter')
+    page.wait_for_timeout(70)
+    check("Enter activa la liana roja y completa el combo",page.evaluate("app.game.stats.combos===1 && app.game.stats.vines===1"))
+    page.screenshot(path=str(OUTPUT / "combo-v4.png"),full_page=True)
+    page.evaluate("() => {app.game.guards=[];app.game.takeFlag(app.game.players[0]);}")
+    page.keyboard.press('f')
+    page.wait_for_timeout(70)
+    check("F pasa la reliquia de azul a rojo",page.evaluate("app.game.flag.carrier===1 && app.game.stats.passes===1"))
+    page.screenshot(path=str(OUTPUT / "pass-v4.png"),full_page=True)
+    page.wait_for_timeout(820)
+    page.keyboard.press('l')
+    page.wait_for_timeout(70)
+    check("L devuelve la reliquia a azul",page.evaluate("app.game.flag.carrier===0 && app.game.stats.passes===2"))
+    page.evaluate("() => {app.game.start(1);app.game.guards=[];app.game.bridge.charged=true;Object.assign(app.game.players[0],app.game.bridge.winch);app.input.clear();}")
+    page.wait_for_timeout(50)
+    floor_before=page.evaluate("app.renderer.groundLayer.toDataURL()")
+    page.keyboard.down('e')
+    page.wait_for_timeout(70)
+    check("La linterna revela el mecanismo en solitario",page.evaluate("app.game.bridge.litTime>7 && !app.game.bridge.open"))
+    page.keyboard.press('q')
+    page.wait_for_timeout(70)
+    check("Q abre el puente en solitario y actualiza el suelo dibujado",page.evaluate("app.game.bridge.open") and page.evaluate("app.renderer.groundLayer.toDataURL()")!=floor_before)
+    page.screenshot(path=str(OUTPUT / "bridge-open-v4.png"),full_page=True)
+    page.wait_for_timeout(5100)
+    check("Mantener E no repite la linterna al terminar la recarga",page.evaluate("app.game.stats.lights===1"))
+    page.keyboard.up('e')
+    page.evaluate("() => {app.game.retryMission();app.ui.update();}")
+    page.wait_for_timeout(70)
+    check("Reintentar cierra el puente también visualmente",page.evaluate("!app.game.bridge.open && app.renderer.cachedRevision===app.game.map.revision") and page.evaluate("app.renderer.groundLayer.toDataURL()") == floor_before)
+    page.screenshot(path=str(OUTPUT / "bridge-closed-v4.png"),full_page=True)
+    # Input activation of focused UI buttons must not consume either tool.
+    page.locator('#pause').focus()
+    page.keyboard.press('Enter')
+    check("Enter en un botón pausa sin disparar la liana",page.evaluate("app.game.state==='PAUSED' && app.game.stats.vines===0"))
+    page.locator('#state-primary').click()
+
     check("Arte pixelado cargado", page.evaluate("async()=> (await import('/src/sprites.js')).atlasReady && (await import('/src/sprites.js')).guardiansReady && app.renderer.keyArtReady"))
     check("Cinco destinos visibles", page.locator("#mission-route li").count() == 5)
     check("Solo la primera misión está disponible antes de avanzar",page.evaluate("app.game.progress.unlocked(1,0) && !app.game.progress.unlocked(1,1)"))
@@ -140,7 +191,7 @@ with sync_playwright() as playwright:
             }""", {"mode":mode,"mission":mission})
             journeys.append(result)
             expected = "VICTORY" if mission == 4 else "MISSION_COMPLETE"
-            check(f"Mapa {mission+1}, modo {mode}: bandera y regreso con guardianes activos", result["state"] == expected and result["runes"] == [1,2,2,3,3][mission] and result["missionIndex"] == mission)
+            check(f"Mapa {mission+1}, modo {mode}: bandera y regreso con guardianes activos", result["state"] == expected and result["runes"] == [0,2,2,3,3][mission] and result["missionIndex"] == mission)
             title="¡AVENTURA COMPLETADA!" if mission == 4 else "¡MISIÓN COMPLETADA!"
             check(f"Resultado de misión {mission+1}, modo {mode}", page.locator("#state-title").inner_text() == title)
             check(f"Estrellas y estadísticas visibles, misión {mission+1}, modo {mode}",page.locator('#result-stats').is_visible() and page.locator('.result-stars').get_attribute('aria-label').endswith('de 3 estrellas'))
@@ -229,6 +280,16 @@ with sync_playwright() as playwright:
         check(f"Botones del menú dentro de la escena a {width}px",page.locator('#how-to').evaluate("e=>e.getBoundingClientRect().bottom <= document.querySelector('.game-shell').getBoundingClientRect().bottom"))
         if width>700:
             check(f"Todo el juego cabe en pantalla a {width}×{height}",page.locator(".game-shell").evaluate("e=>e.getBoundingClientRect().bottom<=innerHeight"))
+
+    migration = browser.new_page()
+    migration.goto(BASE,wait_until='networkidle')
+    migration.evaluate("""() => { localStorage.setItem('selva-progress-v3',JSON.stringify({version:1,checkpoint:{mode:1,index:1},records:{1:[{stars:3,time:30,score:1000}],2:[]}})); }""")
+    migration.reload(wait_until='networkidle')
+    migration.evaluate("async()=>window.app=await import('/src/main.js')")
+    check("Una partida v3 conserva desbloqueos sin mezclar récords",migration.evaluate("app.game.progress.unlocked(1,1)&&app.game.progress.record(1,0)===null&&app.game.progress.data.checkpoint.index===1&&localStorage.getItem('selva-progress-v3')!==null"))
+    migration.locator('#continue-game').click()
+    check("Continuar una partida migrada entra con un único explorador",migration.evaluate("app.game.mode===1&&app.game.players.length===1&&app.game.missionIndex===1"))
+    migration.close()
 
     check("Sin errores JavaScript", not errors)
     check("Sin recursos faltantes", not failures)

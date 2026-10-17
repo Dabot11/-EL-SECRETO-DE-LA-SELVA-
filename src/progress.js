@@ -1,6 +1,16 @@
-const KEY = "selva-progress-v3";
+const KEY = "selva-progress-v4";
+const LEGACY_KEY = "selva-progress-v3";
 const validIndex = (n) => Number.isInteger(n) && n >= 0 && n < 5;
 const validMode = (n) => n === 1 || n === 2;
+const validRecord = (r) =>
+  r &&
+  Number.isInteger(r.stars) &&
+  r.stars >= 1 &&
+  r.stars <= 3 &&
+  Number.isFinite(r.time) &&
+  r.time > 0 &&
+  Number.isFinite(r.score) &&
+  r.score >= 0;
 function defaultStorage() {
   try {
     return globalThis.localStorage ?? null;
@@ -13,54 +23,58 @@ export class Progress {
     this.storage = storage;
     this.available = !!storage;
     this.data = {
-      version: 1,
+      version: 2,
       checkpoint: null,
+      unlocked: { 1: 1, 2: 1 },
       records: { 1: Array(5).fill(null), 2: Array(5).fill(null) },
     };
     try {
-      const saved = JSON.parse(storage?.getItem(KEY) ?? "null");
-      if (saved?.version !== 1) return;
-      if (
-        validMode(saved.checkpoint?.mode) &&
-        validIndex(saved.checkpoint?.index)
-      )
-        this.data.checkpoint = {
-          mode: saved.checkpoint.mode,
-          index: saved.checkpoint.index,
-        };
-      for (const mode of [1, 2])
+      const current = JSON.parse(storage?.getItem(KEY) ?? "null");
+      const legacy =
+        current == null
+          ? JSON.parse(storage?.getItem(LEGACY_KEY) ?? "null")
+          : null;
+      const saved =
+        current?.version === 2
+          ? current
+          : legacy?.version === 1
+            ? legacy
+            : null;
+      if (!saved) return;
+      for (const mode of [1, 2]) {
+        if (saved.version === 2 && Number.isInteger(saved.unlocked?.[mode]))
+          this.data.unlocked[mode] = Math.max(
+            1,
+            Math.min(5, saved.unlocked[mode]),
+          );
         for (let i = 0; i < 5; i++) {
           const record = saved.records?.[mode]?.[i];
-          if (
-            record &&
-            Number.isInteger(record.stars) &&
-            record.stars >= 1 &&
-            record.stars <= 3 &&
-            Number.isFinite(record.time) &&
-            record.time > 0 &&
-            Number.isFinite(record.score) &&
-            record.score >= 0
-          )
+          if (!validRecord(record)) continue;
+          this.data.unlocked[mode] = Math.max(
+            this.data.unlocked[mode],
+            Math.min(5, i + 2),
+          );
+          if (saved.version === 2)
             this.data.records[mode][i] = {
               stars: record.stars,
               time: record.time,
               score: Math.floor(record.score),
             };
         }
-      if (
-        this.data.checkpoint &&
-        !this.unlocked(this.data.checkpoint.mode, this.data.checkpoint.index)
-      )
-        this.data.checkpoint = null;
+      }
+      if (this.unlocked(saved.checkpoint?.mode, saved.checkpoint?.index))
+        this.data.checkpoint = {
+          mode: saved.checkpoint.mode,
+          index: saved.checkpoint.index,
+        };
+      if (legacy) this.save();
     } catch {
       this.available = false;
     }
   }
   unlocked(mode, index) {
     return (
-      validMode(mode) &&
-      validIndex(index) &&
-      (index === 0 || this.data.records[mode][index - 1] !== null)
+      validMode(mode) && validIndex(index) && index < this.data.unlocked[mode]
     );
   }
   record(mode, index) {
@@ -85,13 +99,17 @@ export class Progress {
     }
   }
   complete(mode, index, result) {
-    if (!validMode(mode) || !validIndex(index)) return;
+    if (!validMode(mode) || !validIndex(index) || !validRecord(result)) return;
     const old = this.record(mode, index);
     this.data.records[mode][index] = {
       stars: Math.max(old?.stars ?? 0, result.stars),
       time: Math.min(old?.time ?? Infinity, result.time),
       score: Math.max(old?.score ?? 0, result.score),
     };
+    this.data.unlocked[mode] = Math.max(
+      this.data.unlocked[mode],
+      Math.min(5, index + 2),
+    );
     this.data.checkpoint = index < 4 ? { mode, index: index + 1 } : null;
     this.save();
   }

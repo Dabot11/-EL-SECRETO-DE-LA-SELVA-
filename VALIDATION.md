@@ -1,45 +1,50 @@
-# Verificación de la versión 3
+# Verificación · versión 4
 
-Ejecutada con Node.js **24.19.0**, Python **3.12.14** y Chromium **154.0.8037.57** en Linux.
+Node.js 24.19.0, Python 3.12.14 y Chromium 154.0.8037.57 en Linux.
 
-| Comprobación                                                     | Resultado                                                                                                                                       |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm test`                                                       | **56 pruebas aprobadas, 0 fallos, 0 omitidas.**                                                                                                 |
-| `CHROMIUM_PATH=/usr/bin/chromium python3 tests/browser_smoke.py` | **90 comprobaciones aprobadas.**                                                                                                                |
-| Campañas                                                         | Cinco mapas terminados en ambos modos, con y sin buscar los tres tesoros: 20 escenarios.                                                        |
-| Mapas                                                            | Casillas transitables, patrullas, runas, tesoros y trampas alcanzables.                                                                         |
-| Colisiones                                                       | Movimiento y saltos respetan agua, muros y esquinas; la embestida no desliza ni sobrepasa su aviso.                                             |
-| Enemigos                                                         | Aviso previo, dirección fija del jaguar, recuperación, territorio, turnos de ataque cercanos y base segura.                                     |
-| Objetivos                                                        | Sello de la bandera, carga interrumpible de runas, tesoros cobrados una vez y reinicio de intento.                                              |
-| Cooperación                                                      | Rescate de 0,6 s, interrupción por distancia, protección compartida y rescate por puente sin teletransporte.                                    |
-| Compañero IA                                                     | Escondite, impulso con recarga real, salida de amenazas, espera ante ataques y penalización de bandera.                                         |
-| Teclado                                                          | Movimiento simultáneo, impulso independiente, mantener la tecla no lo repite; pausa, botones y volumen accesibles.                              |
-| Guardado                                                         | Récords y desbloqueos por modalidad, continuar tras recargar y selección de mapas. Datos corruptos o almacenamiento bloqueado no impiden jugar. |
-| Resultados                                                       | Estrellas por criterios distintos, puntos sin explotación de rescates, reloj detenido durante la pausa.                                         |
-| Audio                                                            | Señal medida con AnalyserNode, silencio, efectos independientes, volumen y liberación de voces.                                                 |
-| Recursos                                                         | Atlas original y nuevo cargados; sin errores JavaScript ni recursos faltantes.                                                                  |
-| Adaptabilidad                                                    | Sin desbordamiento a 1366, 1024 y 390 px; menú dentro de la escena y juego visible en pantallas de portátil.                                    |
+| Comprobación        | Resultado                                                                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `npm test`          | 70 pruebas de reglas, regresión, guardado y recorridos                                                                        |
+| Prueba de navegador | 103 comprobaciones con Chromium                                                                                               |
+| Campaña             | Cinco misiones × dos modalidades × con/sin tres tesoros: veinte escenarios terminados                                         |
+| Solo                | Un personaje, tres corazones, protección entre golpes, curación interrumpible, alarma que impide curarse, derrota y reintento |
+| Dúo                 | Roles, combo, pases en ambos sentidos, recarga, paredes, distancia, receptor capturado, caída y rescate                       |
+| Burbuja             | Movimiento lento sin herramientas ni impulso, liana por suelo transitable y canal de rescate                                  |
+| Puente              | Isla inaccesible al inicio; salto real carga estatua; luz con caducidad; liana abre ambos pasos; reintento restaura el cierre |
+| Renderizado         | Caché del suelo cambia al abrir y reiniciar; luces, liana, marcas, vuelo de reliquia y corazones                              |
+| Controles           | WASD/flechas simultáneos; Espacio/Shift; E/Q/Enter/F/L; mantener tecla no repite; botones conservan Enter/Espacio             |
+| Progreso            | Migración v3 conserva desbloqueos y copia anterior; nuevos récords separados; continuar y rejugar por modalidad               |
+| Audio               | Señal mediante AnalyserNode, pausa, silencio, efectos independientes, volumen y liberación de voces                           |
+| Recursos            | Sin errores JavaScript ni archivos faltantes; recursos del juego locales                                                      |
+| Diseño              | Sin desbordamiento a 1366, 1024 y 390 px; escena completa en pantallas de portátil                                            |
 
-## Recorridos reproducibles
+## Cómo reproducir
 
-`tests/journey.js` mueve personajes mediante `Game.update`, sin modificar sus posiciones, desactivar guardianes ni conceder protección adicional. En modo individual, el rojo utiliza la IA del juego. El controlador dirige al azul hacia las runas, la bandera y la entrada; opcionalmente incluye todos los tesoros. Esquiva avisos con las habilidades normales y prioriza rescatar. En cooperativo dirige a los dos exploradores.
+```sh
+npm test
+npm start
+```
 
-Node prueba la campaña continua, incluida la transición entre mapas. En el navegador se comprueban los botones de avance, modalidad y restauración de intentos; cada recorrido automatizado comienza mediante `Game.start` para que el tiempo dedicado a capturas de pantalla no altere los encuentros. Las pruebas aisladas de captura y derrota preparan posiciones controladas; están separadas de las campañas completas.
+Con el servidor iniciado y Python Playwright/Chromium disponibles, en otra terminal:
 
-Los eventos de teclado y los clics son reales en las pruebas de controles. El recorrido de una misión utiliza entradas simuladas del motor y no pulsaciones físicas durante toda la campaña.
+```sh
+CHROMIUM_PATH=/usr/bin/chromium python3 tests/browser_smoke.py
+```
 
-## Revisión visual y sonora
+El navegador usa clics y eventos de teclado reales para controles. Los recorridos completos se dirigen mediante entradas de `Game.update`; no son una grabación de pulsaciones físicas. Las pruebas aisladas preparan posiciones controladas para comprobar una regla, separadas de las campañas completas sin alteraciones de posición o protección.
 
-Se inspeccionaron capturas del menú, juego, cinco mapas, ayuda, resultado, tarjetas de monstruos y diseños de portátil/móvil. El recorte del espíritu ya no incluye parte del arbusto vecino. El jaguar y el Guardián Solar tienen sprites propios. Las runas, tesoros y barras de rescate/ataque se integran en el mapa isométrico.
+Las capturas y el informe JSON se generan en `test-results/`, ignorado por Git. Se inspeccionan menú, ayuda, solo, dúo, puente, combos, pases y resultados. El servidor local verifica comportamiento; GitHub Actions vuelve a ejecutar las pruebas de Node antes de publicar. El despliegue se contrasta aparte con los archivos del sitio público.
 
-La prueba de audio mide señal distinta de cero, silencio al pausar o silenciar, efectos sin música y volumen controlable con teclado. Esto verifica la síntesis; no constituye una evaluación auditiva humana.
+## Correcciones encontradas durante la integración
+
+- Referencias del HUD antiguo a un segundo personaje inexistente en solitario.
+- Identificadores de controles nuevos que no coincidían con el HTML.
+- Suelo cacheado que debía invalidarse al abrir y reiniciar el puente.
+- Animación de pase que debía limpiarse si capturaban al receptor.
+- Un mecanismo cerrado o un tesoro opcional podía impedir completar un combo; la selección de objetivos ahora da prioridad al rescate y al guardián marcado.
+- Las herramientas se bloquean durante pausa, derrota, reinicio y captura.
+- Migración de puntuaciones: conservar desbloqueos sin comparar récords obtenidos bajo reglas diferentes.
 
 ## Límites
 
-- La simulación verifica reglas y rutas; la dificultad y diversión requieren prueba con David y Tavito. [BALANCE.md](BALANCE.md) detalla los resultados y la calibración pendiente con personas.
-- Se ejecutó Chromium; Safari y Firefox no se probaron.
-- La pantalla estrecha se revisó visualmente; el juego requiere teclado de computadora.
-- Guardado local por navegador y dispositivo. Continuar reinicia la misión pendiente, sin restaurar posiciones exactas.
-- Las pruebas de juego se ejecutan en el servidor local. GitHub Actions vuelve a ejecutar la suite de Node antes de desplegar; la publicación se verifica aparte contra los archivos públicos.
-
-Las capturas y `test-results/browser-report.json` se generan al ejecutar la prueba de navegador. Los informes de balance y capturas están en `test-results/`, ignorado por Git.
+Las pruebas comprueban reglas, rutas y presentación; la diversión y dificultad necesitan prueba con David y Tavito. La nueva misión es el prototipo del diseño: no se han creado cuatro rompecabezas equivalentes para el resto de la campaña. Safari y Firefox no se probaron. La vista estrecha se adapta, pero el juego requiere teclado. El guardado sigue siendo local y Continuar reinicia la misión pendiente. La prueba de audio verifica síntesis y volumen, no una evaluación auditiva humana.

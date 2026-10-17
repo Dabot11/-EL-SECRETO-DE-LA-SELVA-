@@ -1,4 +1,4 @@
-import { CONFIG, PlayerState, GuardState, FlagState } from "./config.js";
+import { CONFIG, PlayerState, GuardState } from "./config.js";
 import {
   distance,
   hasLineOfSight,
@@ -8,7 +8,7 @@ import {
   unprojectVector,
   canOccupy,
 } from "./collisions.js";
-import { navigate, findPath } from "./navigation.js";
+import { navigate } from "./navigation.js";
 import { isBush } from "./map.js";
 import { ENEMIES, trapPhase } from "./challenges.js";
 
@@ -61,22 +61,6 @@ export function dangerAt(game, point, padding = 0) {
       trapPhase(t, game.time) !== "idle" && distance(point, t) < 0.65 + padding,
   );
 }
-export function entersDanger(game, body, target) {
-  if (
-    body.protection > 0 ||
-    body.state === PlayerState.HIDDEN ||
-    dangerAt(game, body, 0.2)
-  )
-    return false;
-  const length = distance(body, target);
-  if (!length) return false;
-  const step = Math.min(0.3, length),
-    next = {
-      x: body.x + ((target.x - body.x) / length) * step,
-      y: body.y + ((target.y - body.y) / length) * step,
-    };
-  return dangerAt(game, next, 0.2);
-}
 export function escapeTarget(game, body, target = body) {
   const candidates = [];
   for (const scale of [1, 2, 3])
@@ -94,8 +78,7 @@ export function escapeTarget(game, body, target = body) {
         )
           candidates.push(point);
       }
-  // Escape time matters more than the follow target; otherwise the companion
-  // can choose the far side of an attack to stay closer to the human.
+  // Choose the nearest clear exit before favoring progress toward the objective.
   const cost = (point) => {
     const v = projectVector(point.x - body.x, point.y - body.y);
     return Math.hypot(v.x, v.y) + distance(point, target) * 6;
@@ -117,7 +100,8 @@ function beginAttack(guard, game, player) {
     radius: spec.radius,
     duration: spec.windup,
   };
-  guard.attackTimer = spec.windup;
+  guard.attackTimer = spec.windup * (game.mode === 1 ? 1.15 : 1);
+  guard.attack.duration = guard.attackTimer;
   guard.state = GuardState.WINDUP;
   guard.moving = false;
   game.emit("warning", guard);
@@ -132,6 +116,15 @@ export function updateGuard(guard, game, dt) {
   const { map, players } = game,
     spec = ENEMIES[guard.type];
   guard.moving = false;
+  guard.markedTime = Math.max(0, (guard.markedTime ?? 0) - dt);
+  if (guard.state === GuardState.STUNNED) {
+    guard.stunTime -= dt;
+    if (guard.stunTime <= 0) {
+      guard.state = GuardState.RETURN;
+      guard.attackCooldown = 0.5;
+    }
+    return;
+  }
   guard.alert = Math.max(0, guard.alert - dt);
   guard.attackCooldown = Math.max(0, guard.attackCooldown - dt);
   if (guard.state === GuardState.RECOVER) {
@@ -175,6 +168,7 @@ export function updateGuard(guard, game, dt) {
       moveBody(guard, delta.x, delta.y, map);
     else guard.attackTimer = 0;
     guard.attackTimer -= dt;
+    if (game.strikeStatue(guard, previous)) return;
     for (const player of players)
       if (
         segmentDistance(player, previous, guard) < CONFIG.captureRadius &&
@@ -193,7 +187,12 @@ export function updateGuard(guard, game, dt) {
     (guard.state === GuardState.CHASE ? 1 : 0);
   const seen = players
     .filter((p) => canDetect(guard, p, map, range))
-    .sort((a, b) => distance(guard, a) - distance(guard, b))[0];
+    .sort(
+      (a, b) =>
+        distance(guard, a) -
+        (game.flag.carrier === a.id ? 1.2 : 0) -
+        (distance(guard, b) - (game.flag.carrier === b.id ? 1.2 : 0)),
+    )[0];
   if (seen) {
     if (guard.state !== GuardState.CHASE) {
       guard.alert = 1.1;
@@ -251,87 +250,10 @@ export function updateGuard(guard, game, dt) {
     navigate(
       guard,
       target,
-      guard.speed * (game.alarm && guard.state === GuardState.CHASE ? 1.12 : 1),
+      guard.speed *
+        (game.mode === 1 ? 0.92 : 1) *
+        (game.alarm && guard.state === GuardState.CHASE ? 1.12 : 1),
       dt,
       map,
-    );
-}
-export function updateCompanion(game, dt) {
-  const [human, bot] = game.players;
-  bot.moving = false;
-  if (bot.state === PlayerState.CAPTURED) {
-    bot.aiState = "CAPTURED";
-    return;
-  }
-  if (bot.dashTime > 0) {
-    bot.aiState = "DODGE";
-    game.movePlayer(bot, { x: 0, y: 0 }, dt);
-    return;
-  }
-  let target = human;
-  if (human.state === PlayerState.CAPTURED) bot.aiState = "RESCUE";
-  else if (
-    game.flag.state === FlagState.CARRIED &&
-    distance(human, game.map.base) < CONFIG.baseRadius
-  ) {
-    bot.aiState = "RETURN";
-    target = game.map.base;
-  } else {
-    bot.aiState = "FOLLOW";
-    if (human.state === PlayerState.HIDDEN) {
-      const group = game.map.bushGroups.find((g) =>
-        g.some(
-          ([x, y]) => x === Math.floor(human.x) && y === Math.floor(human.y),
-        ),
-      );
-      if (group)
-        target = group
-          .map(([x, y]) => ({ x: x + 0.5, y: y + 0.5 }))
-          .sort((a, b) => distance(bot, a) - distance(bot, b))[0];
-      bot.aiState = "HIDE";
-    }
-  }
-  if (
-    bot.protection <= 0 &&
-    !isBush(game.map, bot.x, bot.y) &&
-    dangerAt(game, bot, 0.2)
-  ) {
-    const escape = escapeTarget(game, bot, target);
-    if (escape) {
-      bot.aiState = "DODGE";
-      const direction = projectVector(escape.x - bot.x, escape.y - bot.y);
-      game.movePlayer(bot, { ...direction, dash: bot.dashCooldown <= 0 }, dt);
-      return;
-    }
-  }
-  if (
-    human.state === PlayerState.CAPTURED &&
-    distance(bot, human) < CONFIG.rescueRadius * 0.85 &&
-    canTravelStraight(game.map, bot, human)
-  )
-    return;
-  if (
-    bot.aiState === "FOLLOW" &&
-    distance(bot, human) < 0.72 &&
-    canTravelStraight(game.map, bot, human)
-  )
-    return;
-  const path = findPath(game.map, bot, target);
-  const next = canTravelStraight(game.map, bot, target)
-    ? target
-    : (path[1] ?? path[0]);
-  if (next && entersDanger(game, bot, next)) {
-    bot.aiState = "WAIT";
-    return;
-  }
-  if (path.length)
-    navigate(
-      bot,
-      target,
-      CONFIG.playerSpeed *
-        (bot.slowTime > 0 ? 0.62 : 1) *
-        (game.flag.carrier === bot.id ? 0.93 : 1),
-      dt,
-      game.map,
     );
 }

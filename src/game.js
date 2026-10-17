@@ -5,7 +5,7 @@ import {
   FlagState,
   GuardState,
 } from "./config.js";
-import { createMap, isBush, isWalkable } from "./map.js";
+import { createMap, isBush, isWalkable, TILE } from "./map.js";
 import { MISSIONS } from "./missions.js";
 import { createPlayers, createGuards, createFlag } from "./entities.js";
 import {
@@ -15,16 +15,26 @@ import {
   moveBody,
   unprojectVector,
 } from "./collisions.js";
-import { updateGuard, updateCompanion } from "./ai.js";
+import { updateGuard, segmentDistance } from "./ai.js";
 import { Progress } from "./progress.js";
+import { useLight, useVine, passFlag } from "./abilities.js";
 import { trapPhase } from "./challenges.js";
 
 export class Game {
   constructor(progress = new Progress()) {
     this.progress = progress;
-    this.stats = { time: 0, captures: 0, rescues: 0, dashes: 0 };
+    this.stats = {
+      time: 0,
+      captures: 0,
+      rescues: 0,
+      dashes: 0,
+      lights: 0,
+      vines: 0,
+      passes: 0,
+      combos: 0,
+    };
     this.result = null;
-    this.map = createMap();
+    this.map = createMap(0, 1);
     this.missionIndex = 0;
     this.mode = 1;
     this.state = GameState.MENU;
@@ -45,9 +55,17 @@ export class Game {
     this.messageTimer = 3.5;
   }
   resetLevel() {
-    this.players = createPlayers(this.map);
-    this.guards = createGuards(this.map);
+    this.players = createPlayers(this.map, this.mode);
+    this.guards = createGuards(this.map, this.mode);
     this.flag = createFlag(this.map);
+    const layout = this.map.mission.bridge;
+    this.bridge = layout
+      ? { ...layout, charged: false, open: false, litTime: 0 }
+      : null;
+    if (this.bridge) {
+      for (const [x, y] of this.bridge.tiles) this.map.cells[y][x] = TILE.WATER;
+      this.map.revision++;
+    }
     this.runes = this.map.mission.runes.map(([x, y], id) => ({
       id,
       x: x + 0.5,
@@ -71,18 +89,28 @@ export class Game {
     this.round++;
   }
   start(mode = 1, missionIndex = 0) {
-    this.map = createMap(missionIndex);
+    if (mode !== 1 && mode !== 2) throw new RangeError("Modalidad inválida");
+    this.map = createMap(missionIndex, mode);
     this.missionIndex = missionIndex;
     this.mode = mode;
     this.attempts = CONFIG.attempts;
     this.events = [];
-    this.stats = { time: 0, captures: 0, rescues: 0, dashes: 0 };
+    this.stats = {
+      time: 0,
+      captures: 0,
+      rescues: 0,
+      dashes: 0,
+      lights: 0,
+      vines: 0,
+      passes: 0,
+      combos: 0,
+    };
     this.result = null;
     this.resetLevel();
     this.time = 0;
     this.state = GameState.PLAYING;
     this.notify(`Misión ${missionIndex + 1}: ${this.map.mission.briefing}`);
-    this.messageTimer = 6;
+    this.messageTimer = 8;
     this.emit("start");
     this.progress.checkpoint(mode, missionIndex);
   }
@@ -97,7 +125,7 @@ export class Game {
   menu() {
     this.state = GameState.MENU;
     this.missionIndex = 0;
-    this.map = createMap();
+    this.map = createMap(0, this.mode ?? 1);
     this.attempts = CONFIG.attempts;
     this.resetLevel();
     this.events = [];
@@ -111,6 +139,13 @@ export class Game {
       p.dashCooldown = Math.max(0, p.dashCooldown - dt);
       p.dashTime = Math.max(0, p.dashTime - dt);
       p.slowTime = Math.max(0, p.slowTime - dt);
+      for (const key of [
+        "lightCooldown",
+        "vineCooldown",
+        "lightFlash",
+        "vineFlash",
+      ])
+        p[key] = Math.max(0, p[key] - dt);
       if (p.state === PlayerState.CAPTURED) continue;
       p.protection = Math.max(0, p.protection - dt);
       const previous = p.state;
@@ -123,9 +158,82 @@ export class Game {
         this.emit("leaves", p);
     }
   }
+  sealOpen() {
+    return (
+      (!this.bridge || this.bridge.open) && this.runes.every((r) => r.active)
+    );
+  }
+  openBridge() {
+    if (!this.bridge || this.bridge.open) return false;
+    this.bridge.open = true;
+    for (const [x, y] of this.bridge.tiles) this.map.cells[y][x] = TILE.BRIDGE;
+    this.map.revision++;
+    this.emit("bridge", this.bridge.winch);
+    this.notify(
+      this.mode === 1
+        ? "¡Puente abierto! Recupera la reliquia y vuelve."
+        : "¡Puente abierto! Recuperen la reliquia y pásensela durante la huida.",
+    );
+  }
+  strikeStatue(guard, previous) {
+    if (
+      !this.bridge ||
+      this.bridge.charged ||
+      guard.type !== "hunter" ||
+      guard.state !== GuardState.LUNGE ||
+      segmentDistance(this.bridge.statue, previous, guard) > 0.65
+    )
+      return false;
+    this.bridge.charged = true;
+    guard.state = GuardState.RECOVER;
+    guard.recovery = 2.5;
+    guard.attack = null;
+    guard.attackCooldown = 1;
+    this.emit("statue", this.bridge.statue);
+    this.notify(
+      this.mode === 1
+        ? "¡Estatua cargada! Ve al mecanismo junto al puente: E ilumina, Q tira."
+        : "¡Estatua cargada! Azul ilumina el mecanismo con E y rojo tira con ENTER.",
+    );
+    return true;
+  }
+  useLight(player) {
+    return useLight(this, player);
+  }
+  useVine(player) {
+    return useVine(this, player);
+  }
+  passFlag(player) {
+    return passFlag(this, player);
+  }
+  takeFlag(player) {
+    this.alarm = true;
+    Object.assign(this.flag, {
+      state: FlagState.CARRIED,
+      carrier: player.id,
+      x: player.x,
+      y: player.y,
+    });
+    this.emit("flag", player);
+    this.notify(
+      this.mode === 1
+        ? "¡La reliquia es tuya! Regresa a la entrada."
+        : "¡Reliquia recuperada! Azul: F para pasar. Rojo: L para pasar.",
+    );
+  }
   movePlayer(player, input, dt) {
     player.moving = false;
-    if (player.state === PlayerState.CAPTURED) return;
+    if (player.state === PlayerState.CAPTURED) {
+      const length = Math.hypot(input.x, input.y);
+      if (length) {
+        const d = unprojectVector(
+          (input.x / length) * CONFIG.bubbleSpeed * dt,
+          (input.y / length) * CONFIG.bubbleSpeed * dt,
+        );
+        moveBody(player, d.x, d.y, this.map);
+      }
+      return;
+    }
     const length = Math.hypot(input.x, input.y);
     if (input.dash && length && player.dashCooldown <= 0) {
       player.dashTime = CONFIG.dashDuration;
@@ -143,7 +251,7 @@ export class Game {
       ? CONFIG.dashSpeed
       : CONFIG.playerSpeed *
         (player.slowTime > 0 ? 0.62 : 1) *
-        (this.flag.carrier === player.id ? 0.93 : 1);
+        (this.flag.carrier === player.id ? (this.mode === 1 ? 0.93 : 0.78) : 1);
     const delta = unprojectVector(
       direction.x * speed * dt,
       direction.y * speed * dt,
@@ -155,6 +263,21 @@ export class Game {
       p.state !== PlayerState.CAPTURED &&
       distance(p, item) < r &&
       canTravelStraight(this.map, p, item);
+    if (this.mode === 1) {
+      const p = this.players[0];
+      p.campProgress =
+        p.hearts < CONFIG.hearts &&
+        !this.alarm &&
+        distance(p, this.map.base) <= CONFIG.safeRadius
+          ? p.campProgress + dt
+          : 0;
+      if (p.campProgress >= 2) {
+        p.hearts = CONFIG.hearts;
+        p.campProgress = 0;
+        this.emit("heal", p);
+        this.notify("Campamento: corazones recuperados.");
+      }
+    }
     for (const rune of this.runes) {
       if (rune.active) continue;
       rune.progress = this.players.some((p) => near(p, rune))
@@ -166,7 +289,7 @@ export class Game {
         const count = this.runes.filter((r) => r.active).length;
         this.notify(
           count === this.runes.length
-            ? "¡El sello se abrió! Busquen la bandera."
+            ? "¡El sello se abrió! La reliquia ya está disponible."
             : `Runa ${count} de ${this.runes.length} activada.`,
         );
       }
@@ -195,7 +318,10 @@ export class Game {
   }
   finishMission() {
     const relics = this.relics.filter((r) => r.collected).length,
-      clean = this.attempts === CONFIG.attempts && this.stats.captures <= 2;
+      clean =
+        this.mode === 1
+          ? this.stats.captures <= 1
+          : this.attempts === CONFIG.attempts && this.stats.captures <= 2;
     this.result = {
       ...this.stats,
       time: Math.max(0.01, this.stats.time),
@@ -217,12 +343,33 @@ export class Game {
   }
   capture(player) {
     if (
+      this.state !== GameState.PLAYING ||
       player.state === PlayerState.CAPTURED ||
       player.state === PlayerState.HIDDEN ||
       player.protection > 0 ||
       player.dashTime > 0
     )
       return false;
+    if (this.mode === 1) {
+      player.hearts--;
+      this.stats.captures++;
+      player.dashTime = 0;
+      this.emit("hurt", player);
+      if (player.hearts <= 0) {
+        this.attempts = 0;
+        this.state = GameState.GAME_OVER;
+        player.moving = false;
+        this.emit("round");
+        this.notify("Sin corazones. Puedes reintentar esta misión.");
+      } else {
+        player.protection = 1.7;
+        player.state = PlayerState.PROTECTED;
+        this.notify(
+          `Quedan ${player.hearts} corazones. Antes de tomar la reliquia puedes curarte en la entrada.`,
+        );
+      }
+      return true;
+    }
     player.state = PlayerState.CAPTURED;
     player.rescueProgress = 0;
     player.dashTime = 0;
@@ -234,10 +381,11 @@ export class Game {
       Object.assign(this.flag, {
         state: FlagState.DROPPED,
         carrier: null,
+        flight: null,
         x: player.x,
         y: player.y,
       });
-      this.notify("¡La bandera cayó! Acércate para recuperarla.");
+      this.notify("¡La reliquia cayó! Acércate para recuperarla.");
     } else this.notify("¡Tu compañero necesita un rescate!");
     for (const guard of this.guards)
       if (guard.target === player.id) {
@@ -296,27 +444,27 @@ export class Game {
     if (
       collector &&
       this.flag.state === FlagState.ON_PEDESTAL &&
-      !this.runes.every((r) => r.active)
+      !this.sealOpen()
     ) {
       if (this.lockHintTimer <= 0) {
-        this.notify("La bandera está sellada. Activa las runas de jade.");
+        this.notify(
+          this.bridge && !this.bridge.open
+            ? "La reliquia está sellada. Abre el puente del jaguar."
+            : "La reliquia está sellada. Activa las runas de jade.",
+        );
         this.lockHintTimer = 4;
       }
       return;
     }
-    if (collector) {
-      this.alarm = true;
-      this.flag.state = FlagState.CARRIED;
-      this.flag.carrier = collector.id;
-      this.flag.x = collector.x;
-      this.flag.y = collector.y;
-      this.emit("flag", collector);
-      this.notify("¡Tienen la bandera! Regresen juntos a la entrada.");
-    }
+    if (collector) this.takeFlag(collector);
   }
+
   checkOutcome() {
     if (this.state !== GameState.PLAYING) return;
-    if (this.players.every((p) => p.state === PlayerState.CAPTURED)) {
+    if (
+      this.mode === 2 &&
+      this.players.every((p) => p.state === PlayerState.CAPTURED)
+    ) {
       this.attempts--;
       this.emit("round");
       this.state =
@@ -368,11 +516,24 @@ export class Game {
       }
       return;
     }
+    if (this.bridge)
+      this.bridge.litTime = Math.max(0, this.bridge.litTime - dt);
+    this.flag.passCooldown = Math.max(0, this.flag.passCooldown - dt);
+    if (this.flag.flight) {
+      this.flag.flight.remaining -= dt;
+      if (this.flag.flight.remaining <= 0) this.flag.flight = null;
+    }
     this.refreshPlayerStates(dt);
-    this.movePlayer(this.players[0], inputs[0], dt);
+    this.movePlayer(this.players[0], inputs[0] ?? { x: 0, y: 0 }, dt);
     this.refreshPlayerStates();
-    if (this.mode === 1) updateCompanion(this, dt);
-    else this.movePlayer(this.players[1], inputs[1], dt);
+    if (this.mode === 2)
+      this.movePlayer(this.players[1], inputs[1] ?? { x: 0, y: 0 }, dt);
+    for (const p of this.players) {
+      const action = inputs[p.id] ?? {};
+      if (action.light) this.useLight(p);
+      if (action.vine) this.useVine(p);
+      if (action.pass) this.passFlag(p);
+    }
     this.refreshPlayerStates();
     this.stats.time += dt;
     this.lockHintTimer = Math.max(0, this.lockHintTimer - dt);

@@ -1,4 +1,4 @@
-// Five authored layouts. Every mission keeps the same cooperative rules.
+// Five authored layouts. The first mission introduces mode-specific cooperation.
 const column = (x, ys) => ys.map((y) => [x, y]);
 const row = (y, xs) => xs.map((x) => [x, y]);
 const range = (start, end) =>
@@ -6,11 +6,11 @@ const range = (start, end) =>
 const patrol = (type, route) => ({ type, route });
 export const MISSIONS = [
   {
-    name: "El Templo Perdido",
-    subtitle: "El primer secreto",
+    name: "El Puente del Jaguar",
+    subtitle: "Luz, liana y un salto de fe",
     theme: "jungle",
     briefing:
-      "Cruza el río, usa los arbustos y recupera la bandera del templo.",
+      "Atrae al jaguar hacia la estatua y abre el puente con luz y liana.",
     difficulty: 1,
     speed: 33,
     detection: 3.5,
@@ -364,7 +364,7 @@ export const MISSIONS = [
     subtitle: "El último secreto",
     theme: "sun",
     briefing:
-      "El santuario reúne a todos los guardianes. Recuperen la última bandera juntos.",
+      "El santuario reúne a todos los guardianes. Recupera la última reliquia.",
     difficulty: 5,
     speed: 41,
     detection: 4.5,

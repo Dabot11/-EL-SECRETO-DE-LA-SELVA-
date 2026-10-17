@@ -366,30 +366,84 @@ export class Renderer {
     this.rect(x - 1, y - 28, 2, 3, "#fff7cf");
   }
   flag(x, y, small = false) {
-    const h = small ? 32 : 41;
-    this.rect(x, y - h, 2, h, "#dec58a");
-    const f = Math.round(Math.sin(this.time * 7) * 2);
-    this.poly(
-      [
-        [x + 2, y - h + 1],
-        [x + 24, y - h + 2 + f],
-        [x + 18, y - h + 10 + f],
-        [x + 24, y - h + 16 + f],
-        [x + 2, y - h + 15],
-      ],
-      "#c8493e",
-    );
-    this.poly(
-      [
-        [x + 2, y - h + 1],
-        [x + 24, y - h + 2 + f],
-        [x + 20, y - h + 5 + f],
-        [x + 2, y - h + 5],
-      ],
-      "#f48259",
-    );
-    this.rune(x + 10, y - h + 8, "#f8d981");
-    this.rect(x - 1, y - h - 3, 4, 4, "#e9ce88");
+    // A jade sun idol distinguishes the shared mission relic from optional gold gems.
+    const c = this.ctx;
+    c.save();
+    c.translate(x, y);
+    if (small) c.scale(0.7, 0.7);
+    this.diamond(0, -20, 14, 17, "#e3ba61", "#ffebad");
+    this.diamond(0, -20, 9, 12, "#248a78", "#9af1cb");
+    this.rect(-5, -24, 3, 3, "#f9e2a2");
+    this.rect(2, -24, 3, 3, "#f9e2a2");
+    this.rect(-3, -16, 6, 2, "#f9e2a2");
+    this.rect(-11, -5, 22, 4, "#c3944d");
+    this.rect(-8, -2, 16, 3, "#f7d685");
+    c.restore();
+  }
+  bridgeObject(bridge, statue, solo) {
+    const item = statue ? bridge.statue : bridge.winch,
+      s = toScreen(item.x, item.y);
+    const color = statue
+      ? bridge.charged
+        ? "#f6d57f"
+        : "#95c1b1"
+      : bridge.litTime > 0 || bridge.open
+        ? "#adf4d1"
+        : "#6c9b92";
+    this.shadow(s.x, s.y, 20, 7);
+    this.diamond(s.x, s.y, 22, 11, "#2b5e52", color);
+    if (statue) {
+      this.rect(s.x - 12, s.y - 31, 24, 27, "#537a67");
+      this.rect(s.x - 15, s.y - 39, 9, 12, "#749880");
+      this.rect(s.x + 6, s.y - 39, 9, 12, "#749880");
+      this.rect(s.x - 16, s.y - 30, 32, 20, "#749880");
+      this.rect(s.x - 12, s.y - 25, 7, 5, color);
+      this.rect(s.x + 5, s.y - 25, 7, 5, color);
+      this.diamond(s.x, s.y - 16, 5, 4, "#1a4039");
+      this.rect(s.x - 9, s.y - 9, 18, 4, color);
+      this.text(
+        bridge.charged ? "✓ CARGADA" : "ESTATUA",
+        s.x,
+        s.y - 48,
+        color,
+        8,
+      );
+    } else {
+      this.rect(s.x - 12, s.y - 17, 24, 15, "#876542");
+      this.rect(s.x - 15, s.y - 20, 30, 5, "#c59f6d");
+      this.line(
+        [
+          [s.x - 13, s.y - 32],
+          [s.x + 13, s.y - 10],
+        ],
+        color,
+        3,
+      );
+      this.line(
+        [
+          [s.x + 13, s.y - 32],
+          [s.x - 13, s.y - 10],
+        ],
+        color,
+        3,
+      );
+      this.diamond(s.x, s.y - 21, 5, 5, "#dfcd8c", color);
+      this.text(
+        bridge.open
+          ? "✓ ABIERTO"
+          : bridge.litTime > 0
+            ? solo
+              ? "Q · TIRAR"
+              : "ENTER · TIRAR"
+            : "E · ILUMINAR",
+        s.x,
+        s.y - 42,
+        color,
+        8,
+      );
+      if (bridge.litTime > 0 && !bridge.open)
+        this.bar(s.x, s.y + 8, bridge.litTime / (solo ? 8 : 4), color, 38);
+    }
   }
   pedestal(x, y, hasFlag, locked = false) {
     const p = this.palette;
@@ -403,7 +457,7 @@ export class Renderer {
     if (hasFlag) {
       this.flag(x, y - 17);
       this.text(
-        locked ? "SELLADA" : "BANDERA",
+        locked ? "SELLADA" : "RELIQUIA",
         x + 6,
         y - 66,
         locked ? "#96efe0" : "#f5dc96",
@@ -563,7 +617,8 @@ export class Renderer {
     this.scenery(map);
     this.floor(map);
     this.ctx = previous;
-    this.cachedMission = map.index;
+    this.cachedMap = map;
+    this.cachedRevision = map.revision;
   }
   water(map) {
     for (let y = 1; y < 13; y++)
@@ -641,6 +696,22 @@ export class Renderer {
   }
   signals(game) {
     this.zone(game.map.base, CONFIG.safeRadius, "#8fcab1", false);
+    if (game.bridge && !game.bridge.open) {
+      const b = game.bridge;
+      this.zone(
+        b.charged ? b.winch : b.statue,
+        0.85,
+        b.charged ? "#9feaca" : "#f2bb6d",
+        false,
+      );
+      for (const [x, y] of b.tiles) {
+        const s = toScreen(x + 0.5, y + 0.5);
+        this.text("◇", s.x, s.y - 3, "#b4dfc9", 18);
+      }
+    }
+    for (const p of game.players)
+      if (p.lightFlash > 0)
+        this.zone(p, CONFIG.lightRange * (1 - p.lightFlash / 0.5), "#fcdf92");
     for (const trap of game.traps) {
       const phase = trapPhase(trap, game.time),
         s = toScreen(trap.x, trap.y),
@@ -695,13 +766,7 @@ export class Renderer {
         );
         this.diamond(b.x, b.y, 7, 4, color);
       } else this.zone(a.origin, a.radius, color);
-      this.bar(
-        s.x,
-        s.y + 10,
-        1 - guard.attackTimer / ENEMIES[guard.type].windup,
-        color,
-        36,
-      );
+      this.bar(s.x, s.y + 10, 1 - guard.attackTimer / a.duration, color, 36);
     }
   }
   objectiveObject(item, isRune) {
@@ -778,7 +843,8 @@ export class Renderer {
       facing: p.facing,
       scale: 1.9,
     });
-    if (game.flag.carrier === p.id) this.flag(s.x + 14, s.y - 19 + bob, true);
+    if (game.flag.carrier === p.id && !game.flag.flight)
+      this.flag(s.x + 14, s.y - 19 + bob, true);
     c.restore();
     this.diamond(s.x, s.y + 4, 5, 2, p.id ? "#ed9676" : "#6fd3dc");
     if (hidden) {
@@ -810,7 +876,7 @@ export class Renderer {
     }
     if (captured) {
       this.text(
-        p.rescueProgress > 0 ? "RESCATANDO" : "¡AYUDA!",
+        p.rescueProgress > 0 ? "RESCATANDO" : "¡RUEDA!",
         s.x,
         s.y - 56,
         "#c9f5ee",
@@ -836,6 +902,11 @@ export class Renderer {
               ? 1.7
               : 1.8,
     });
+    if (g.markedTime > 0) this.text("◇ LUZ", s.x, s.y - 74, "#ffeb9c", 8);
+    if (g.state === GuardState.STUNNED) {
+      this.text("✦ ✦", s.x, s.y - 60, "#b1f4d5", 12);
+      this.bar(s.x, s.y + 7, g.stunTime / 2.2);
+    }
     if (g.type === "warden") this.text("SOLAR", s.x, s.y - 79, "#ffca85", 8);
     if (g.state === GuardState.WINDUP)
       this.text("¡!", s.x, s.y - 65, ENEMIES[g.type].color, 17);
@@ -902,7 +973,11 @@ export class Renderer {
       c.fillStyle = gradient;
       c.fillRect(0, 0, CONFIG.width, CONFIG.height);
     } else {
-      if (this.cachedMission !== game.map.index) this.cacheFloor(game.map);
+      if (
+        this.cachedMap !== game.map ||
+        this.cachedRevision !== game.map.revision
+      )
+        this.cacheFloor(game.map);
       c.drawImage(this.groundLayer, 0, 0);
       this.water(game.map);
       this.signals(game);
@@ -949,7 +1024,7 @@ export class Renderer {
             s.x,
             s.y,
             game.flag.state === FlagState.ON_PEDESTAL,
-            !game.runes.every((r) => r.active),
+            !game.sealOpen(),
           ),
         -0.3,
       );
@@ -969,6 +1044,16 @@ export class Renderer {
           this.flag(p.x, p.y);
         });
       }
+      if (game.bridge)
+        for (const statue of [true, false]) {
+          const pos = statue ? game.bridge.statue : game.bridge.winch;
+          add(
+            pos.x,
+            pos.y,
+            () => this.bridgeObject(game.bridge, statue, game.mode === 1),
+            -0.1,
+          );
+        }
       for (const rune of game.runes)
         add(rune.x, rune.y, () => this.objectiveObject(rune, true));
       for (const relic of game.relics)
@@ -980,8 +1065,48 @@ export class Renderer {
         add(player.x, player.y, () => this.player(player, game), 0.02);
       objects.sort((a, b) => a.depth - b.depth);
       objects.forEach((o) => o.draw());
+      for (const player of game.players)
+        if (player.vineFlash > 0 && player.vineTarget) {
+          const from = toScreen(player.x, player.y),
+            to = toScreen(player.vineTarget.x, player.vineTarget.y);
+          this.line(
+            [
+              [from.x, from.y - 18],
+              [to.x, to.y - 15],
+            ],
+            "#afd97d",
+            3,
+          );
+          this.diamond(to.x, to.y - 15, 5, 4, "#e3e5a4");
+        }
+      if (game.flag.flight) {
+        const f = game.flag.flight,
+          t = 1 - f.remaining / 0.35,
+          receiver = game.players[game.flag.carrier];
+        const from = toScreen(f.from.x, f.from.y),
+          to = toScreen(receiver.x, receiver.y);
+        this.flag(
+          from.x + (to.x - from.x) * t,
+          from.y + (to.y - from.y) * t - 15 - Math.sin(t * Math.PI) * 42,
+          true,
+        );
+      }
       const base = toScreen(game.map.base.x, game.map.base.y);
-      this.text("ENTRADA", base.x - 30, base.y + 41, "#f3dea3", 10);
+      this.text(
+        game.mode === 1 && !game.alarm ? "ENTRADA · ♥ CURAR" : "ENTRADA",
+        base.x - 30,
+        base.y + 41,
+        "#f3dea3",
+        10,
+      );
+      if (game.players[0].campProgress > 0)
+        this.bar(
+          base.x,
+          base.y + 14,
+          game.players[0].campProgress / 2,
+          "#ffa99c",
+          40,
+        );
       if (game.map.theme === "moon") {
         for (const [x, y] of [
           [1.5, 10],
