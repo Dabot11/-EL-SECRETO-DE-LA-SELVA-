@@ -175,8 +175,8 @@ export class UI {
       this.inGame = !menu;
     }
     $("chapter-name").textContent = menu
-      ? "01—05 · CINCO MISIONES, UN GRAN SECRETO"
-      : `0${g.missionIndex + 1} / 05 · ${g.map.mission.name.toUpperCase()}`;
+      ? `01—${MISSIONS.length} · DIEZ MISIONES, UN GRAN SECRETO`
+      : `${String(g.missionIndex + 1).padStart(2, "0")} / ${MISSIONS.length} · ${g.map.mission.name.toUpperCase()}`;
     $("mission-progress").textContent =
       `MISIÓN ${g.missionIndex + 1} DE ${MISSIONS.length}`;
     const checkpoint = g.progress.data.checkpoint;
@@ -200,7 +200,7 @@ export class UI {
         const record = g.progress.record(this.routeMode, i),
           unlocked = g.progress.unlocked(this.routeMode, i),
           current = !menu && i === g.missionIndex;
-        return `<li class="${record ? "completed " : ""}${current ? "current" : ""}" ${current ? 'aria-current="step"' : ""}><button data-mission="${i}" ${!menu || !unlocked ? "disabled" : ""} aria-label="${unlocked ? "Jugar" : "Bloqueada"}: ${mission.name}"><span class="route-number">0${i + 1}</span><strong>${mission.name}</strong><small>${mission.subtitle}</small><span class="difficulty" aria-label="Dificultad ${i + 1} de 5">${"◆".repeat(i + 1)}<span>${"◇".repeat(4 - i)}</span></span><small class="route-record">${record ? `${"★".repeat(record.stars)}${"☆".repeat(3 - record.stars)} · ${formatTime(record.time)} · ${record.score} pts` : unlocked ? "LISTA PARA EXPLORAR" : "Completa la misión anterior"}</small></button></li>`;
+        return `<li class="${record ? "completed " : ""}${current ? "current" : ""}" ${current ? 'aria-current="step"' : ""}><button data-mission="${i}" ${!menu || !unlocked ? "disabled" : ""} aria-label="${unlocked ? "Jugar" : "Bloqueada"}: ${mission.name}"><span class="route-number">${String(i + 1).padStart(2, "0")}</span><strong>${mission.name}</strong><small>${mission.subtitle}</small><span class="difficulty" aria-label="Dificultad ${mission.difficulty} de ${MISSIONS.length}">${"◆".repeat(mission.difficulty)}<span>${"◇".repeat(MISSIONS.length - mission.difficulty)}</span></span><small class="route-record">${record ? `${"★".repeat(record.stars)}${"☆".repeat(3 - record.stars)} · ${formatTime(record.time)} · ${record.score} pts` : unlocked ? "LISTA PARA EXPLORAR" : "Completa la misión anterior"}</small></button></li>`;
       }).join("");
     }
     $("hud").hidden = state === GameState.MENU;
@@ -323,7 +323,7 @@ export class UI {
             ? "EL SECRETO ESTABA EN SEGUIR EXPLORANDO"
             : "EL SECRETO ESTABA EN HACERLO JUNTOS"
           : completed
-            ? `MISIÓN ${g.missionIndex + 1} DE 5 · ${g.map.mission.name.toUpperCase()}`
+            ? `MISIÓN ${g.missionIndex + 1} DE ${MISSIONS.length} · ${g.map.mission.name.toUpperCase()}`
             : lost
               ? "CADA AVENTURA TRAE UN NUEVO COMIENZO"
               : "UN MOMENTO PARA RESPIRAR";
@@ -336,8 +336,8 @@ export class UI {
               : "Aventura en pausa";
         $("state-description").textContent = won
           ? solo
-            ? "¡Cinco reliquias recuperadas con tu ingenio y tus dos herramientas!"
-            : "¡Cinco reliquias recuperadas en equipo!"
+            ? `¡${MISSIONS.length} reliquias recuperadas con tu ingenio y tus dos herramientas!`
+            : `¡${MISSIONS.length} reliquias recuperadas en equipo!`
           : completed
             ? `¡Reliquia recuperada! Sigue ${MISSIONS[g.missionIndex + 1].name}, con ${solo ? "tres corazones" : "tres nuevos intentos"}.`
             : lost

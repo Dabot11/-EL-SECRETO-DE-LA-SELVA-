@@ -17,6 +17,20 @@ function steer(game, player, target) {
   return { x: path[1].x - player.x, y: path[1].y - player.y };
 }
 
+function escortTarget(game, leader, companion) {
+  // Two people keep one tile of space instead of deliberately stacking for every attack.
+  const neighbors = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ]
+    .map(([x, y]) => ({ x: leader.x + x, y: leader.y + y }))
+    .filter((p) => canOccupy(game.map, p.x, p.y) && !dangerAt(game, p));
+  neighbors.sort((a, b) => distance(companion, a) - distance(companion, b));
+  return neighbors[0] ?? leader;
+}
+
 export function playJourney(
   game,
   mode,
@@ -54,7 +68,9 @@ export function playJourney(
         ? a
         : game.flag.state === "CARRIED" && distance(a, game.map.base) < 1.5
           ? game.map.base
-          : a;
+          : b
+            ? escortTarget(game, a, b)
+            : a;
     if (a.state === "CAPTURED") target = b;
     const inputs = game.players.map((player, index) => {
       const destination = index === 0 ? target : companionTarget;
@@ -98,6 +114,12 @@ export function playJourney(
         game.flag.state === "CARRIED"
       )
         input.pass = true;
+      // Visible warnings also matter before entering a tile, not just after arriving.
+      if (
+        !dangerAt(game, player) &&
+        dangerAt(game, { x: player.x + input.x, y: player.y + input.y })
+      )
+        input = { ...input, x: 0, y: 0 };
       return input;
     });
     game.update(1 / 60, inputs);

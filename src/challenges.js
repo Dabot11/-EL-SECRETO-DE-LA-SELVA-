@@ -1,3 +1,4 @@
+import { EXTRA_MISSIONS } from "./expansion.js";
 // Objectives deliberately pull explorers into different parts of each authored map.
 // Coordinates refer to tile centers; no objective replaces collision geometry.
 export const CHALLENGES = [
@@ -110,6 +111,7 @@ export const CHALLENGES = [
       { x: 13, y: 9, offset: 3.2, type: "sun" },
     ],
   },
+  ...EXTRA_MISSIONS,
 ];
 export const ENEMIES = Object.freeze({
   stone: {

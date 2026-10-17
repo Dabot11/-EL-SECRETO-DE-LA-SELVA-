@@ -1,6 +1,8 @@
+import { MISSIONS } from "./missions.js";
+const COUNT = MISSIONS.length;
 const KEY = "selva-progress-v5";
 const LEGACY_KEYS = ["selva-progress-v4", "selva-progress-v3"];
-const validIndex = (n) => Number.isInteger(n) && n >= 0 && n < 5;
+const validIndex = (n) => Number.isInteger(n) && n >= 0 && n < COUNT;
 const validMode = (n) => n === 1 || n === 2;
 const validRecord = (r) =>
   r &&
@@ -26,7 +28,7 @@ export class Progress {
       version: 3,
       checkpoint: null,
       unlocked: { 1: 1, 2: 1 },
-      records: { 1: Array(5).fill(null), 2: Array(5).fill(null) },
+      records: { 1: Array(COUNT).fill(null), 2: Array(COUNT).fill(null) },
     };
     try {
       const current = JSON.parse(storage?.getItem(KEY) ?? "null");
@@ -48,14 +50,14 @@ export class Progress {
         if (saved.version >= 2 && Number.isInteger(saved.unlocked?.[mode]))
           this.data.unlocked[mode] = Math.max(
             1,
-            Math.min(5, saved.unlocked[mode]),
+            Math.min(COUNT, saved.unlocked[mode]),
           );
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < COUNT; i++) {
           const record = saved.records?.[mode]?.[i];
           if (!validRecord(record)) continue;
           this.data.unlocked[mode] = Math.max(
             this.data.unlocked[mode],
-            Math.min(5, i + 2),
+            Math.min(COUNT, i + 2),
           );
           if (saved.version === 3)
             this.data.records[mode][i] = {
@@ -70,7 +72,20 @@ export class Progress {
           mode: saved.checkpoint.mode,
           index: saved.checkpoint.index,
         };
-      if (legacy) this.save();
+      const previousCount = Math.max(
+        saved.records?.[1]?.length ?? 0,
+        saved.records?.[2]?.length ?? 0,
+      );
+      const expanded =
+        saved.version === 3 && previousCount > 0 && previousCount < COUNT;
+      // A completed older campaign can continue directly into the new chapter.
+      if (expanded && !this.data.checkpoint) {
+        const mode = [1, 2].find((mode) =>
+          this.record(mode, previousCount - 1),
+        );
+        if (mode) this.data.checkpoint = { mode, index: previousCount };
+      }
+      if (legacy || expanded) this.save();
     } catch {
       this.available = false;
     }
@@ -111,9 +126,10 @@ export class Progress {
     };
     this.data.unlocked[mode] = Math.max(
       this.data.unlocked[mode],
-      Math.min(5, index + 2),
+      Math.min(COUNT, index + 2),
     );
-    this.data.checkpoint = index < 4 ? { mode, index: index + 1 } : null;
+    this.data.checkpoint =
+      index < COUNT - 1 ? { mode, index: index + 1 } : null;
     this.save();
   }
 }

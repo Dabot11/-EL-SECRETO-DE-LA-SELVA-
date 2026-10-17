@@ -1238,8 +1238,8 @@ kbd {
 }
 .difficulty {
   display: block;
-  letter-spacing: 3px;
-  font-size: 9px;
+  letter-spacing: 1px;
+  font-size: 8px;
   margin-top: 12px;
   color: #cfb87c;
 }
@@ -1289,7 +1289,7 @@ kbd {
   .mission-route {
     grid-template-columns: repeat(2, 1fr);
   }
-  .mission-route li:last-child {
+  .mission-route li:last-child:nth-child(odd) {
     grid-column: 1/-1;
   }
   .mission-route li {

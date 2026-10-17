@@ -1,3 +1,4 @@
+import { MISSIONS } from "../src/missions.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Game } from "../src/game.js";
@@ -51,8 +52,8 @@ test("la proyección usa cuadrados alineados con los ejes de pantalla", () => {
   assert.equal(right.x - p.x, down.y - p.y);
   assert.equal(CONFIG.tileWidth, CONFIG.tileHeight);
 });
-test("los cinco mapas crecen a 560 casillas y conservan conectividad y objetivos", () => {
-  for (let i = 0; i < 5; i++) {
+test("los diez mapas crecen a 560 casillas y conservan conectividad y objetivos", () => {
+  for (let i = 0; i < MISSIONS.length; i++) {
     const map = createMap(i);
     assert.equal(map.width, 28);
     assert.equal(map.height, 20);

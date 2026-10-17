@@ -1,3 +1,4 @@
+import { MISSIONS } from "../src/missions.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Game } from "../src/game.js";
@@ -56,7 +57,7 @@ function arena(type = "stone") {
 }
 
 test("todas las runas, tesoros y trampas están en suelo alcanzable y fuera de la entrada", () => {
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < MISSIONS.length; i++) {
     const g = fixture(i);
     if (g.bridge) g.openBridge();
     for (const item of [...g.runes, ...g.relics, ...g.traps]) {
@@ -306,12 +307,12 @@ test("datos corruptos, almacenamiento bloqueado y récords inválidos no impiden
   }
 });
 for (const mode of [1, 2])
-  test(`los cinco mapas pueden completarse buscando todos los tesoros en modo ${mode}`, () => {
-    for (let i = 0; i < 5; i++) {
+  test(`los diez mapas pueden completarse buscando todos los tesoros en modo ${mode}`, () => {
+    for (let i = 0; i < MISSIONS.length; i++) {
       const r = playJourney(new Game(), mode, i, false, true);
       assert.equal(
         r.state,
-        i === 4 ? "VICTORY" : "MISSION_COMPLETE",
+        i === MISSIONS.length - 1 ? "VICTORY" : "MISSION_COMPLETE",
         `Misión ${i + 1}`,
       );
       assert.equal(r.relics, 3);

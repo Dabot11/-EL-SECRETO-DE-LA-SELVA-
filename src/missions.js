@@ -1,4 +1,5 @@
-// Five authored layouts. The first mission introduces mode-specific cooperation.
+import { EXTRA_MISSIONS, EXTRA_THEMES } from "./expansion.js";
+// Ten authored layouts. The first mission introduces mode-specific cooperation.
 const column = (x, ys) => ys.map((y) => [x, y]);
 const row = (y, xs) => xs.map((x) => [x, y]);
 const range = (start, end) =>
@@ -361,10 +362,10 @@ export const MISSIONS = [
   },
   {
     name: "El Santuario del Sol",
-    subtitle: "El último secreto",
+    subtitle: "El umbral de una nueva aventura",
     theme: "sun",
     briefing:
-      "El santuario reúne a todos los guardianes. Recupera la última reliquia.",
+      "El santuario reúne a todos los guardianes. Recupera su reliquia y sigue hacia el pantano.",
     difficulty: 5,
     speed: 41,
     detection: 4.5,
@@ -468,8 +469,10 @@ export const MISSIONS = [
       ]),
     ],
   },
+  ...EXTRA_MISSIONS,
 ];
 export const THEMES = {
+  ...EXTRA_THEMES,
   jungle: {
     ground: ["#91976c", "#9da177", "#a4a77c", "#8b9569"],
     line: "#626d49",

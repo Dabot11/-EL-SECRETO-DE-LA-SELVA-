@@ -201,14 +201,14 @@ with sync_playwright() as playwright:
     page.locator('#state-primary').click()
 
     check("Arte pixelado cargado", page.evaluate("async()=> (await import('/src/sprites.js')).atlasReady && (await import('/src/sprites.js')).guardiansReady && app.renderer.keyArtReady"))
-    check("Cinco destinos visibles", page.locator("#mission-route li").count() == 5)
+    check("Diez destinos disponibles en la campaña", page.locator("#mission-route li").count() == 10)
     check("Solo la primera misión está disponible antes de avanzar",page.evaluate("app.game.progress.unlocked(1,0) && !app.game.progress.unlocked(1,1)"))
     journeys = []
     for mode in [1, 2]:
         if mode == 2:
             page.locator("#state-menu").click()
             page.locator("#play-duo").click()
-        for mission in range(5):
+        for mission in range(10):
             page.wait_for_timeout(100)
             page.screenshot(path=str(OUTPUT / f"mission-{mission+1}-mode-{mode}.png"), full_page=True)
             # Fresh normal start keeps simulation timing independent of screenshot duration.
@@ -217,17 +217,17 @@ with sync_playwright() as playwright:
               const result=playJourney(app.game,args.mode,args.mission,false);app.ui.update();return result;
             }""", {"mode":mode,"mission":mission})
             journeys.append(result)
-            expected = "VICTORY" if mission == 4 else "MISSION_COMPLETE"
-            check(f"Mapa {mission+1}, modo {mode}: bandera y regreso con guardianes activos", result["state"] == expected and result["runes"] == [0,2,2,3,3][mission] and result["missionIndex"] == mission)
-            title="¡AVENTURA COMPLETADA!" if mission == 4 else "¡MISIÓN COMPLETADA!"
+            expected = "VICTORY" if mission == 9 else "MISSION_COMPLETE"
+            check(f"Mapa {mission+1}, modo {mode}: bandera y regreso con guardianes activos", result["state"] == expected and result["runes"] == [0,2,2,3,3,3,3,4,4,4][mission] and result["missionIndex"] == mission)
+            title="¡AVENTURA COMPLETADA!" if mission == 9 else "¡MISIÓN COMPLETADA!"
             check(f"Resultado de misión {mission+1}, modo {mode}", page.locator("#state-title").inner_text() == title)
             check(f"Estrellas y estadísticas visibles, misión {mission+1}, modo {mode}",page.locator('#result-stats').is_visible() and page.locator('.result-stars').get_attribute('aria-label').endswith('de 3 estrellas'))
-            if mission < 4:
+            if mission < 9:
                 page.locator("#state-primary").click()
                 check(f"Avance al mapa {mission+2} sin perder el modo {mode}", page.evaluate(f"app.game.missionIndex === {mission+1} && app.game.mode === {mode} && app.game.attempts === 3 && app.game.state === 'PLAYING'"))
         page.wait_for_timeout(180)
         page.screenshot(path=str(OUTPUT / f"victory-mode-{mode}.png"), full_page=True)
-        check(f"Cinco misiones marcadas como completadas, modo {mode}", page.locator("#mission-route li.completed").count() == 5)
+        check(f"Diez misiones marcadas como completadas, modo {mode}", page.locator("#mission-route li.completed").count() == 10)
     page.locator("#state-primary").click()
     check("Rejugar la campaña empieza en el primer mapa", page.evaluate("app.game.missionIndex === 0 && app.game.state === 'PLAYING'"))
 
@@ -361,6 +361,23 @@ with sync_playwright() as playwright:
     migration.locator('#continue-game').click()
     check("Continuar una partida migrada entra con un único explorador",migration.evaluate("app.game.mode===1&&app.game.players.length===1&&app.game.missionIndex===1"))
     migration.close()
+
+    expansion = browser.new_page()
+    expansion.goto(BASE,wait_until='networkidle')
+    expansion.evaluate("""() => {
+      const record={stars:3,time:42,score:1800};
+      localStorage.setItem('selva-progress-v5', JSON.stringify({version:3,checkpoint:null,unlocked:{1:1,2:5},records:{1:Array(5).fill(null),2:Array(5).fill(record)}}));
+    }""")
+    expansion.reload(wait_until='networkidle')
+    expansion.evaluate("async()=>window.app=await import('/src/main.js')")
+    check("Una campaña v5 completada ofrece continuar desde el nivel seis",'misión 6' in expansion.locator('#continue-game').inner_text())
+    expansion.locator('#route-mode').select_option('2')
+    check("El mapa seis está desbloqueado y el siete espera su turno",expansion.locator('button[data-mission="5"]').is_enabled() and expansion.locator('button[data-mission="6"]').is_disabled())
+    check("Los récords anteriores y la numeración 10 se conservan",expansion.locator('#mission-route li.completed').count()==5 and expansion.locator('#mission-route .route-number').last.inner_text()=='10')
+    expansion.screenshot(path=str(OUTPUT/'campaign-ten-missions.png'),full_page=True)
+    expansion.locator('#continue-game').click()
+    check("Continuar la expansión inicia el nuevo mapa en el modo guardado",expansion.evaluate("app.game.missionIndex===5&&app.game.mode===2&&app.game.state==='PLAYING'"))
+    expansion.close()
 
     check("Sin errores JavaScript", not errors)
     check("Sin recursos faltantes", not failures)

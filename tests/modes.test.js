@@ -1,3 +1,4 @@
+import { MISSIONS } from "../src/missions.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Game } from "../src/game.js";
@@ -49,12 +50,13 @@ function arena(mode = 2) {
 }
 
 test("solo tiene un explorador y menos enemigos; conserva al Guardián Solar", () => {
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < MISSIONS.length; i++) {
     const solo = fixture(1, i),
       duo = fixture(2, i);
     assert.equal(solo.players.length, 1);
     assert.equal(solo.guards.length, duo.guards.length - 1);
-    if (i === 4) assert.ok(solo.guards.some((g) => g.type === "warden"));
+    if (duo.guards.some((g) => g.type === "warden"))
+      assert.ok(solo.guards.some((g) => g.type === "warden"));
   }
   const g = fixture(1);
   const before = { ...g.players[0] };

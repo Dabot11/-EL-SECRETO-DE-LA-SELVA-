@@ -1,18 +1,18 @@
-# Diseño y balance · versión 5
+# Diseño y balance · versión 5.2
 
-La petición principal es facilitar la lectura y la esquiva: cámara desde arriba y movimientos por cuadros, como en la referencia de Tibia. Las reglas de solo y dúo de v4 se conservan. Cambian la geometría, el ritmo de desplazamiento y la forma de anunciar ataques en las cinco misiones.
+La campaña incorpora cinco mapas nuevos y llega a diez misiones. Se mantienen los cinco diseños iniciales, el movimiento por casillas, la vista ampliada y las reglas distintas de solo y dúo. La expansión añade objetivos y encuentros mediante geometrías, patrullas y paletas propias.
 
 ## Decisiones
 
-| Cambio                                                      | Resultado buscado                                                               |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Proyección rectangular con casillas cuadradas               | Arriba/abajo/izquierda/derecha coinciden con los ejes de la pantalla            |
-| Un paso cardinal por orden; repetición al mantener la tecla | Saber dónde terminará cada movimiento                                           |
-| Última dirección pulsada y un giro pendiente                | Responder con rapidez sin cortar esquinas ni generar diagonales                 |
-| Impulso de exactamente una casilla                          | Una esquiva corta y predecible, con recarga                                     |
-| Enemigos y liana sujetos a los mismos pasos                 | Evitar que una embestida o un rescate introduzcan desplazamientos diagonales    |
-| Avisos de ataque por casillas                               | Mostrar con precisión qué cuadros son peligrosos                                |
-| Mapas de 28 × 20                                            | Ampliar salas, pasillos y cruces, conservando la identidad de los cinco diseños |
+| Cambio                                                      | Resultado buscado                                                            |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Proyección rectangular con casillas cuadradas               | Arriba/abajo/izquierda/derecha coinciden con los ejes de la pantalla         |
+| Un paso cardinal por orden; repetición al mantener la tecla | Saber dónde terminará cada movimiento                                        |
+| Última dirección pulsada y un giro pendiente                | Responder con rapidez sin cortar esquinas ni generar diagonales              |
+| Impulso de exactamente una casilla                          | Una esquiva corta y predecible, con recarga                                  |
+| Enemigos y liana sujetos a los mismos pasos                 | Evitar que una embestida o un rescate introduzcan desplazamientos diagonales |
+| Avisos de ataque por casillas                               | Mostrar con precisión qué cuadros son peligrosos                             |
+| Mapas de 28 × 20                                            | Ampliar salas, pasillos y cruces, conservando la identidad de cada diseño    |
 
 La expansión añade filas y columnas a los diseños existentes y convierte objetivos, patrullas, arbustos y puentes a sus nuevas posiciones. No se estira la imagen: la lógica contiene 560 casillas reales, frente a 252. Se ve el mapa completo, sin una cámara que separe al dúo.
 
@@ -38,9 +38,9 @@ Las posiciones de juego siempre están en centros de casilla. La animación inte
 
 ## Recorridos automatizados
 
-`tests/journey.js` dirige las entradas de movimiento y herramientas, con guardianes, daño, colisiones y recargas reales. No teletransporta, elimina enemigos ni concede invulnerabilidad. Completa los cinco mapas en ambos modos, con y sin todos los tesoros. La estatua se carga mediante un salto real del jaguar.
+`tests/journey.js` dirige las entradas de movimiento y herramientas, con guardianes, daño, colisiones y recargas reales. No teletransporta, elimina enemigos ni concede invulnerabilidad. Completa los diez mapas en ambos modos, con y sin todos los tesoros. La estatua se carga mediante un salto real del jaguar.
 
-Los resultados detallados se generan en `test-results/balance-v5.json`. Estas simulaciones reaccionan inmediatamente a avisos y no representan tiempos ni dificultad de personas. Sirven para detectar bloqueos y regresiones; la diversión requiere jugar.
+Los resultados detallados se generan en `test-results/balance-v5.2.json`. Estas simulaciones reaccionan inmediatamente a avisos y no representan tiempos ni dificultad de personas. Sirven para detectar bloqueos y regresiones; la diversión requiere jugar.
 
 ## Correcciones durante el cambio
 
@@ -51,6 +51,20 @@ Los resultados detallados se generan en `test-results/balance-v5.json`. Estas si
 - Los cuadros anunciados de un ataque y la comprobación de daño usan la misma lista.
 - Los desbloqueos de v3/v4 se conservan sin mezclar puntuaciones de los mapas anteriores con los ampliados.
 
+## Segundo capítulo: misiones 6–10
+
+| Misión                   | Estructura                                    | Runas | Guardianes solo / dúo | Velocidad base |
+| ------------------------ | --------------------------------------------- | ----- | --------------------- | -------------- |
+| Pantano de la Niebla     | Tres orillas y cruces alternativos            | 3     | 5 / 6                 | 56             |
+| Canteras del Ámbar       | Pasillos escalonados que cortan la visión     | 3     | 6 / 7                 | 58             |
+| Laguna de Cristal        | Islas y canales con pasos alternativos        | 4     | 6 / 7                 | 60             |
+| Fortaleza de las Espinas | Runas exteriores y patio protegido            | 4     | 7 / 8                 | 62             |
+| Corazón de la Selva      | Isla central con cuatro accesos y dos Solares | 4     | 8 / 9                 | 64             |
+
+Los campos de detección aumentan de 4,6 a 5 casillas y la búsqueda de 3,1 a 3,5 s. Los avisos y la recuperación de los ataques conservan sus duraciones. El jaguar más rápido sigue siendo más lento que el jugador, incluso durante la alarma. Las trampas se desfasan para permitir esperar o cambiar de cruce. Los arbustos ofrecen refugios entre territorios; todos los objetivos, tesoros y patrullas son alcanzables.
+
+La simulación de aceptación ahora mantiene al acompañante a una casilla y evita entrar en cuadros con un aviso visible. Utiliza únicamente entradas normales, sin cambiar posiciones, enemigos ni protección. Los cuarenta recorridos (10 mapas × 2 modos × con/sin todos los tesoros) terminan. Reaccionar sin demora hace que estos recorridos sean más eficaces que una partida humana; no mide la dificultad percibida.
+
 ## Prueba con David y Tavito
 
-Comparar si ahora se entiende dónde termina cada paso, si es fácil salir de un aviso y si los mapas se sienten suficientemente amplios en laptop. El siguiente ajuste debe salir de esas observaciones: duración del paso, tiempo de aviso y densidad de encuentros. Se conservan los cinco objetivos actuales; esta actualización cambia cámara, movimiento y tamaño de mapas.
+Comparar la elección de cruces en el pantano y la laguna, la utilidad de los muros en las canteras, y la presión de las patrullas en la fortaleza y el corazón. La progresión conserva margen de esquiva y aumenta encuentros y objetivos. El siguiente ajuste debe salir de sus partidas: qué rutas usan, dónde se sienten atrapados y cómo coordinan las dos herramientas.

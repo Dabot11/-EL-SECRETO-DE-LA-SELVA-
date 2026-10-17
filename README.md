@@ -2,7 +2,7 @@
 
 Una aventura de **David y Tavito**, para uno o dos jugadores en la misma computadora.
 
-**Versión 5.1:** cámara desde arriba, suelo rectangular y movimiento de cuatro direcciones, casilla por casilla. Los cinco mapas pasan de 18 × 14 a **28 × 20 casillas**: 560 cuadros, más del doble que antes. Se mantienen un explorador con dos herramientas en solitario y las habilidades complementarias del dúo.
+**Versión 5.2:** la campaña crece a **diez misiones**, con cinco mapas nuevos de 28 × 20 casillas, colores propios, rutas alternativas y dificultad progresiva. Se conservan la cámara desde arriba, el movimiento por casillas, la vista ampliada y las reglas de solitario y dúo.
 
 Los enemigos, sus patrullas y sus embestidas también avanzan por casillas. Los avisos muestran los cuadros que puede golpear cada ataque. La cámara mantiene el mapa completo visible para ambos jugadores.
 
@@ -62,15 +62,20 @@ El **impulso** es un paso rápido de una casilla, con protección durante ese pa
 - Una burbuja puede rodar casilla por casilla, lentamente y por suelo transitable, sin herramientas ni impulso. Rojo puede acercar la burbuja azul con la liana cuando hay un camino libre. Azul puede interrumpir al guardián con luz para acercarse a rescatar al rojo. Permanecer juntos 0,6 s completa el rescate; alejarse interrumpe la barra.
 - El rescatado recibe 1,5 s de protección y quien lo libera 0,8 s. Capturar al portador en dúo deja la reliquia en el suelo; en solitario un golpe consume un corazón y se conserva la reliquia.
 
-## Cinco misiones
+## Diez misiones
 
-| #   | Misión                    | Objetivo                                                                                          | Guardianes solo / dúo |
-| --- | ------------------------- | ------------------------------------------------------------------------------------------------- | --------------------- |
-| 1   | El Puente del Jaguar      | Atraer un salto hacia la estatua, iluminar el mecanismo y tirar con la liana para abrir los pasos | 2 / 3                 |
-| 2   | Los Puentes del Río       | Dos runas a ambos lados del río y cruces con niebla                                               | 2 / 3                 |
-| 3   | El Jardín de las Estatuas | Dos runas, senderos entre columnas y esporas                                                      | 3 / 4                 |
-| 4   | Las Ruinas de la Luna     | Tres runas, canales y espíritus                                                                   | 4 / 5                 |
-| 5   | El Santuario del Sol      | Tres runas, dos ríos y el Guardián Solar                                                          | 5 / 6                 |
+| #   | Misión                      | Objetivo                                                                                          | Guardianes solo / dúo |
+| --- | --------------------------- | ------------------------------------------------------------------------------------------------- | --------------------- |
+| 1   | El Puente del Jaguar        | Atraer un salto hacia la estatua, iluminar el mecanismo y tirar con la liana para abrir los pasos | 2 / 3                 |
+| 2   | Los Puentes del Río         | Dos runas a ambos lados del río y cruces con niebla                                               | 2 / 3                 |
+| 3   | El Jardín de las Estatuas   | Dos runas, senderos entre columnas y esporas                                                      | 3 / 4                 |
+| 4   | Las Ruinas de la Luna       | Tres runas, canales y espíritus                                                                   | 4 / 5                 |
+| 5   | El Santuario del Sol        | Tres runas, dos ríos y el Guardián Solar                                                          | 5 / 6                 |
+| 6   | El Pantano de la Niebla     | Tres runas, tres orillas y cruces alternativos entre niebla                                       | 5 / 6                 |
+| 7   | Las Canteras del Ámbar      | Tres runas, corredores entre muros y esporas                                                      | 6 / 7                 |
+| 8   | La Laguna de Cristal        | Cuatro runas repartidas entre islas y pasos con hielo                                             | 6 / 7                 |
+| 9   | La Fortaleza de las Espinas | Cuatro runas exteriores, puertas vigiladas y un patio central                                     | 7 / 8                 |
+| 10  | El Corazón de la Selva      | Cuatro runas, una isla central con cuatro accesos y dos Guardianes Solares                        | 8 / 9                 |
 
 En la primera misión, coloca la estatua entre el jaguar y tú: cuando aparezca la dirección de su salto, esquiva a un lado. Tras el impacto, acércate al mecanismo del puente. Ilumínalo y usa la liana antes de que se apague: tienes 8 s en solitario y 4 s en dúo. La estatua permanece cargada hasta reiniciar el intento.
 
@@ -84,7 +89,7 @@ Cada misión concede una estrella por terminar, otra por reunir los tres tesoros
 
 El menú permite repetir misiones desbloqueadas. Se guardan mejores tiempos, puntuación y estrellas por modalidad. **Continuar** reinicia la misión pendiente; no restaura posiciones exactas. El guardado es local al navegador y dispositivo.
 
-La versión 5 conserva los desbloqueos válidos y la misión pendiente de v3 y v4. Los récords de los mapas más grandes empiezan de nuevo; las copias anteriores permanecen en el navegador. Si el almacenamiento está bloqueado o dañado, se puede seguir jugando durante la sesión.
+La versión 5.2 conserva todos los récords, estrellas y desbloqueos de v5/v5.1. Si terminaste el nivel 5, el 6 queda disponible automáticamente; Continuar ofrece el nuevo capítulo cuando no había una misión pendiente. Los modos siguen teniendo avances independientes. También se mantienen las migraciones de v3/v4: sus desbloqueos pasan a la campaña actual, con récords separados y la copia anterior intacta. Si el almacenamiento está bloqueado o dañado, se puede seguir jugando durante la sesión.
 
 ## Música y sonido
 

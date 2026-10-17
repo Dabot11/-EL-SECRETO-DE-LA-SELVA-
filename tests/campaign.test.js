@@ -8,10 +8,10 @@ import { distance, canOccupy } from "../src/collisions.js";
 import { CONFIG, GameState, PlayerState, FlagState } from "../src/config.js";
 import { playJourney } from "./journey.js";
 
-test("cinco mapas distintos, todos los caminos y patrullas son accesibles", () => {
-  assert.equal(MISSIONS.length, 5);
+test("diez mapas distintos, todos los caminos y patrullas son accesibles", () => {
+  assert.equal(MISSIONS.length, 10);
   const layouts = new Set();
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < MISSIONS.length; i++) {
     const map = createMap(i);
     layouts.add(JSON.stringify(map.cells));
     for (let y = 0; y < map.height; y++)
@@ -26,12 +26,12 @@ test("cinco mapas distintos, todos los caminos y patrullas son accesibles", () =
       for (const [x, y] of patrol.route)
         assert.ok(canOccupy(map, x + 0.5, y + 0.5));
   }
-  assert.equal(layouts.size, 5);
+  assert.equal(layouts.size, MISSIONS.length);
 });
 
 test("la dificultad aumenta sin guardianes más rápidos que el jugador", () => {
   let previous = null;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < MISSIONS.length; i++) {
     const g = new Game();
     g.start(1, i);
     assert.ok(g.guards.every((guard) => guard.speed < CONFIG.playerSpeed));
@@ -45,8 +45,8 @@ test("la dificultad aumenta sin guardianes más rápidos que el jugador", () => 
   }
 });
 
-test("ida y vuelta físicas por los cinco mapas sin atravesar obstáculos", () => {
-  for (let i = 0; i < 5; i++) {
+test("ida y vuelta físicas por los diez mapas sin atravesar obstáculos", () => {
+  for (let i = 0; i < MISSIONS.length; i++) {
     const map = createMap(i),
       body = { ...map.base };
     for (const target of [map.pedestal, map.base]) {
@@ -60,7 +60,7 @@ test("ida y vuelta físicas por los cinco mapas sin atravesar obstáculos", () =
 });
 
 test("captura doble, derrota y reintento conservan la misión y el modo", () => {
-  for (let i = 1; i < 5; i++) {
+  for (let i = 1; i < MISSIONS.length; i++) {
     const g = new Game();
     g.start(2, i);
     const layout = JSON.stringify(g.map.cells);
@@ -89,20 +89,22 @@ test("avanzar exige completar la misión y restaura intentos, bandera y guardias
   const g = new Game();
   g.start(2);
   assert.equal(g.nextMission(), false);
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < MISSIONS.length; i++) {
     assert.equal(g.missionIndex, i);
     g.attempts = 1;
     Object.assign(g.flag, { state: FlagState.CARRIED, carrier: 0 });
     g.checkOutcome();
     assert.equal(
       g.state,
-      i === 4 ? GameState.VICTORY : GameState.MISSION_COMPLETE,
+      i === MISSIONS.length - 1
+        ? GameState.VICTORY
+        : GameState.MISSION_COMPLETE,
     );
     const frozen = JSON.stringify(g.players);
     g.update(0.05);
     assert.equal(JSON.stringify(g.players), frozen);
-    assert.equal(g.nextMission(), i < 4);
-    if (i < 4) {
+    assert.equal(g.nextMission(), i < MISSIONS.length - 1);
+    if (i < MISSIONS.length - 1) {
       assert.equal(g.attempts, 3);
       assert.equal(g.flag.state, FlagState.ON_PEDESTAL);
       assert.equal(g.guards.length, MISSIONS[i + 1].patrols.length);
@@ -112,23 +114,25 @@ test("avanzar exige completar la misión y restaura intentos, bandera y guardias
   g.start(1);
   assert.equal(g.missionIndex, 0);
   assert.throws(() => createMap(-1), RangeError);
-  assert.throws(() => createMap(5), RangeError);
+  assert.throws(() => createMap(MISSIONS.length), RangeError);
 });
 
 for (const mode of [1, 2])
-  test(`campaña de cinco misiones, modo ${mode}, con guardianes y colisiones activos`, () => {
+  test(`campaña de diez misiones, modo ${mode}, con guardianes y colisiones activos`, () => {
     const game = new Game();
     game.start(mode);
-    for (let index = 0; index < 5; index++) {
+    for (let index = 0; index < MISSIONS.length; index++) {
       const result = playJourney(game, mode, index, true);
       assert.equal(result.missionIndex, index);
       assert.equal(
         result.state,
-        index === 4 ? GameState.VICTORY : GameState.MISSION_COMPLETE,
+        index === MISSIONS.length - 1
+          ? GameState.VICTORY
+          : GameState.MISSION_COMPLETE,
       );
       assert.ok(result.flags > 0);
       assert.equal(result.runes, game.runes.length);
       assert.ok(result.attempts > 0);
-      if (index < 4) assert.equal(game.nextMission(), true);
+      if (index < MISSIONS.length - 1) assert.equal(game.nextMission(), true);
     }
   });

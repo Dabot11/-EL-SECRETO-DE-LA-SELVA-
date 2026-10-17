@@ -1,22 +1,22 @@
-# Verificación · versión 5.1
+# Verificación · versión 5.2
 
 Node.js 24.19.0, Python 3.12.14 y Chromium 154.0.8037.57 en Linux.
 
 | Comprobación        | Resultado                                                                                                                                                                                                             |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm test`          | 88 pruebas de reglas, regresión, guardado y recorridos                                                                                                                                                                |
-| Prueba de navegador | 140 comprobaciones con Chromium                                                                                                                                                                                       |
-| Campaña             | Cinco misiones × dos modalidades × con/sin tres tesoros: veinte escenarios terminados                                                                                                                                 |
+| `npm test`          | 91 pruebas de reglas, regresión, guardado y recorridos                                                                                                                                                                |
+| Prueba de navegador | 184 comprobaciones con Chromium                                                                                                                                                                                       |
+| Campaña             | Diez misiones × dos modalidades × con/sin tres tesoros: cuarenta escenarios terminados                                                                                                                                |
 | Solo                | Un personaje, tres corazones, protección entre golpes, curación interrumpible, alarma que impide curarse, derrota y reintento                                                                                         |
 | Dúo                 | Roles, combo, pases en ambos sentidos, recarga, paredes, distancia, receptor capturado, caída y rescate                                                                                                               |
 | Burbuja             | Movimiento lento sin herramientas ni impulso, liana por suelo transitable y canal de rescate                                                                                                                          |
 | Puente              | Isla inaccesible al inicio; salto real carga estatua; luz con caducidad; liana abre ambos pasos; reintento restaura el cierre                                                                                         |
 | Cuadrícula          | Centros exactos, vecinos cardinales, giro pendiente, repetición, impulso de una casilla, animación y pausa                                                                                                            |
-| Cámara y mapas      | Proyección rectangular de cuadrados; cinco mapas de 28 × 20, objetivos y patrullas alcanzables                                                                                                                        |
+| Cámara y mapas      | Proyección rectangular de cuadrados; diez mapas de 28 × 20, objetivos y patrullas alcanzables                                                                                                                         |
 | Ataques             | Casillas avisadas iguales a las de daño; jaguar alineado, pasos cardinales y parada ante obstáculos                                                                                                                   |
 | Renderizado         | Caché del suelo cambia al abrir y reiniciar; luces, liana, marcas, vuelo de reliquia y corazones                                                                                                                      |
 | Controles           | WASD/flechas simultáneos; Espacio/Shift; E/Q/Enter/F/L; un toque mueve un cuadro, sostener movimiento encadena pasos, última dirección tiene prioridad; mantener habilidad no repite; botones conservan Enter/Espacio |
-| Progreso            | Migración v3/v4 conserva desbloqueos y copia anterior; nuevos récords separados; continuar y rejugar por modalidad                                                                                                    |
+| Progreso            | Migración v3/v4; expansión v5/v5.1 conserva récords, desbloquea el nivel 6 y respeta el checkpoint; victoria final en el nivel 10                                                                                     |
 | Audio               | Señal mediante AnalyserNode, pausa, silencio, efectos independientes, volumen y liberación de voces                                                                                                                   |
 | Recursos            | Sin errores JavaScript ni archivos faltantes; recursos del juego locales                                                                                                                                              |
 | Diseño              | Vista de juego completa a 1366×768, 1440×900, 1280×720, 1024×768 y 1280×600; menú móvil a 390 px; Retina a escala 2                                                                                                   |
@@ -38,6 +38,14 @@ El navegador usa clics y eventos de teclado reales para controles. Los recorrido
 
 Las capturas y el informe JSON se generan en `test-results/`, ignorado por Git. Se inspeccionan menú, ayuda, solo, dúo, puente, combos, pases y resultados. El servidor local verifica comportamiento; GitHub Actions vuelve a ejecutar las pruebas de Node antes de publicar. El despliegue se contrasta aparte con los archivos del sitio público.
 
+## Verificación de la expansión
+
+- Veinte recorridos de campaña en el navegador, con guardianes activos; cuarenta escenarios de lógica incluyendo todos los tesoros.
+- Veinte revisiones adicionales de HUD: mapas 6–10, solo/dúo y ventanas de 1366×768 y 1280×600, sin controles ni mensajes superpuestos. Informe en `test-results/expansion-layout.json`.
+- La campaña antigua de cinco niveles conserva sus récords y ofrece Continuar desde el sexto; una misión pendiente anterior tiene prioridad.
+- La lista muestra 10 destinos, la numeración termina en 10 y los desbloqueos siguen separados por modalidad.
+- La simulación coopera manteniendo una casilla de separación y espera antes de entrar en avisos de ataque. Usa las mismas reglas y herramientas del juego.
+
 ## Correcciones encontradas durante la integración
 
 - Jaguar que podía repetir un ataque diagonal sin alcanzar al jugador: ahora se alinea antes de avisar.
@@ -50,4 +58,4 @@ Las capturas y el informe JSON se generan en `test-results/`, ignorado por Git. 
 
 ## Límites
 
-Las pruebas comprueban reglas, rutas y presentación; la diversión y dificultad necesitan prueba con David y Tavito. Esta versión amplía los cinco mapas y adapta sus movimientos y ataques, conservando los objetivos actuales. Safari y Firefox no se probaron. La vista estrecha se adapta, pero el juego requiere teclado. El guardado sigue siendo local y Continuar reinicia la misión pendiente. La prueba de audio verifica síntesis y volumen, no una evaluación auditiva humana.
+Las pruebas comprueban reglas, rutas y presentación; la diversión y dificultad necesitan prueba con David y Tavito. Esta versión añade cinco mapas y mantiene los cinco iniciales; la dificultad crece mediante velocidades, detección, patrullas y distribución de objetivos. Safari y Firefox no se probaron. La vista estrecha se adapta, pero el juego requiere teclado. El guardado sigue siendo local y Continuar reinicia la misión pendiente. La prueba de audio verifica síntesis y volumen, no una evaluación auditiva humana.
