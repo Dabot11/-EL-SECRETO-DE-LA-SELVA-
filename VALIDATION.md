@@ -1,11 +1,11 @@
-# Verificación · versión 5.3
+# Verificación · versión 5.4
 
 Node.js 24.19.0, Python 3.12.14 y Chromium 154.0.8037.57 en Linux.
 
 | Comprobación        | Resultado                                                                                                                                                                                                             |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm test`          | 91 pruebas de reglas, regresión, guardado y recorridos                                                                                                                                                                |
-| Prueba de navegador | 186 comprobaciones con Chromium                                                                                                                                                                                       |
+| `npm test`          | 94 pruebas de reglas, regresión, guardado y recorridos                                                                                                                                                                |
+| Prueba de navegador | 191 comprobaciones con Chromium                                                                                                                                                                                       |
 | Campaña             | Diez misiones × dos modalidades × con/sin tres tesoros: cuarenta escenarios terminados                                                                                                                                |
 | Solo                | Un personaje, tres corazones, protección entre golpes, curación interrumpible, alarma que impide curarse, derrota y reintento                                                                                         |
 | Dúo                 | Roles, combo, pases en ambos sentidos, recarga, paredes, distancia, receptor capturado, caída y rescate                                                                                                               |
@@ -38,6 +38,16 @@ El navegador usa clics y eventos de teclado reales para controles. Los recorrido
 
 Las capturas y el informe JSON se generan en `test-results/`, ignorado por Git. Se inspeccionan menú, ayuda, solo, dúo, puente, combos, pases y resultados. El servidor local verifica comportamiento; GitHub Actions vuelve a ejecutar las pruebas de Node antes de publicar. El despliegue se contrasta aparte con los archivos del sitio público.
 
+## Verificación de la caminata direccional
+
+- WASD y flechas reales prueban las cuatro direcciones de ambos exploradores; la orientación se mantiene al terminar cada casilla.
+- Tres pruebas nuevas de lógica verifican alternancia de pies, transición entre pasos, giros, reposo y velocidades normal/ralentizada/impulso, sin modificar la partida desde el dibujo.
+- El navegador confirma que las piernas de las poses de reposo y de ambas zancadas son distintas en los dos colores y las cuatro vistas.
+- Revisión visual de las 32 combinaciones de vista/color/pose (incluido el perfil izquierdo reflejado), en tamaño de juego y ampliadas. Dibujos alineados por el sombrero; las botas se recortan completas.
+- Las pruebas detectaron que dos filas del nuevo atlas estaban demasiado próximas para el recorte inicial. Se ajustó la detección de espacios transparentes y se comprobó la carga del atlas completo.
+- Con movimiento reducido, sigue cambiando la orientación aunque se omite la animación de piernas. La pausa conserva la imagen exacta.
+- Si falla la imagen nueva, el juego conserva vistas direccionales de respaldo. Comprobación con carga bloqueada, teclado y pausa en `test-results/walk-extra.json`.
+
 ## Verificación de UI, gráficos y animaciones
 
 - Cuarenta revisiones de composición: los diez niveles, solo y dúo, a 1366×768 y 1280×600. Objetivos, mensajes y controles caben fuera del mapa sin superponerse.
@@ -69,4 +79,4 @@ Las capturas y el informe JSON se generan en `test-results/`, ignorado por Git. 
 
 ## Límites
 
-Las pruebas comprueban reglas, rutas y presentación; la diversión y dificultad necesitan prueba con David y Tavito. Esta versión renueva la presentación de las diez misiones sin modificar el balance; la dificultad sigue creciendo mediante velocidades, detección, patrullas y distribución de objetivos. Safari y Firefox no se probaron. La vista estrecha se adapta, pero el juego requiere teclado. El guardado sigue siendo local y Continuar reinicia la misión pendiente. La prueba de audio verifica síntesis y volumen, no una evaluación auditiva humana.
+Las pruebas comprueban reglas, rutas y presentación; la diversión y dificultad necesitan prueba con David y Tavito. Esta versión añade caminata direccional a los exploradores y conserva las diez misiones sin modificar el balance; la dificultad sigue creciendo mediante velocidades, detección, patrullas y distribución de objetivos. Safari y Firefox no se probaron. La vista estrecha se adapta, pero el juego requiere teclado. El guardado sigue siendo local y Continuar reinicia la misión pendiente. La prueba de audio verifica síntesis y volumen, no una evaluación auditiva humana.

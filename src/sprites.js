@@ -1,4 +1,6 @@
-// Local illustrated atlas; original matrix sprites remain as a loading fallback.
+import { loadExplorerSprites, drawExplorerAtlas } from "./explorer-sprites.js";
+export { explorersReady } from "./explorer-sprites.js";
+// Local illustrated atlases; matrix sprites remain as a loading fallback.
 export let atlasReady = false;
 let atlas = null;
 const frames = [];
@@ -6,6 +8,9 @@ let guardianAtlas = null;
 const guardianFrames = [];
 export let guardiansReady = false;
 export async function loadSprites() {
+  await Promise.allSettled([loadWorldSprites(), loadExplorerSprites()]);
+}
+async function loadWorldSprites() {
   atlas = new Image();
   atlas.src = new URL("../assets/adventure-sprites.png", import.meta.url).href;
   await atlas.decode();
@@ -134,6 +139,54 @@ const explorer = [
   "....kk..kk......",
   "....kk..kk......",
 ];
+const explorerFront = [
+  "......hhhh......",
+  ".....hHHHHh.....",
+  "....hHHHHHHh....",
+  "....hHggggHh....",
+  "..hhhhhhhhhhhh..",
+  "..hHHHHHHHHHHh..",
+  "...dddddddddd...",
+  "....dssssssd....",
+  "....dsksskSd....",
+  "....dssssssd....",
+  ".....dssssd.....",
+  "....BBccBB......",
+  "...bBCCCCBb.....",
+  "...sBCcCCBs.....",
+  "...sBCgCCBs.....",
+  "....BCCCCB......",
+  "....BggggB......",
+  ".....pppp.......",
+  ".....pPPp.......",
+  ".....p..p.......",
+  "....kk..kk......",
+  "....kk..kk......",
+];
+const explorerBack = [
+  "......hhhh......",
+  ".....hHHHHh.....",
+  "....hHHHHHHh....",
+  "....hHggggHh....",
+  "..hhhhhhhhhhhh..",
+  "..hHHHHHHHHHHh..",
+  "...dddddddddd...",
+  "....dddddddd....",
+  "....dDDDDdd.....",
+  "....dDDDDdd.....",
+  ".....dddd.......",
+  "....CBbbBC......",
+  "...CBHHHHBC.....",
+  "...sBHbbHBs.....",
+  "...sBHggHBs.....",
+  "....BHbbHB......",
+  "....BBggBB......",
+  ".....pppp.......",
+  ".....pPPp.......",
+  ".....p..p.......",
+  "....kk..kk......",
+  "....kk..kk......",
+];
 const stone = [
   "......mmmm......",
   "....mmMMMMmm....",
@@ -189,8 +242,9 @@ const palettes = {
     b: "#817348",
     c: "#2a647d",
     C: "#55adc5",
-    p: "#536256",
-    P: "#657368",
+    p: "#927647",
+    P: "#cbb17c",
+    S: "#fff1c9",
     k: "#293a32",
   },
   stone: {
@@ -208,8 +262,13 @@ export function drawSprite(
   type,
   x,
   y,
-  { red = false, frame = 0, facing = 1, scale = 1 } = {},
+  { red = false, frame = 0, facing = 1, scale = 1, direction = "south" } = {},
 ) {
+  if (
+    type === "explorer" &&
+    drawExplorerAtlas(ctx, x, y, { red, frame, scale, direction })
+  )
+    return;
   if (type === "hunter" || type === "warden") {
     if (guardiansReady) {
       const f = guardianFrames[(type === "warden" ? 2 : 0) + (frame % 2)],
@@ -235,18 +294,21 @@ export function drawSprite(
     }
     type = "stone";
   }
-  if (atlasReady) {
-    const cell =
-      type === "explorer"
-        ? (red ? 2 : 0) + (frame % 2)
-        : type === "stone"
-          ? 4 + (frame % 2)
-          : 6;
+  if (atlasReady && type !== "explorer") {
+    const cell = type === "stone" ? 4 + (frame % 2) : 6;
     drawArt(ctx, cell, x, y, Math.round(22 * scale), facing);
     return;
   }
   const matrix =
-    type === "explorer" ? explorer : type === "stone" ? stone : spirit;
+    type === "explorer"
+      ? direction === "north"
+        ? explorerBack
+        : direction === "south"
+          ? explorerFront
+          : explorer
+      : type === "stone"
+        ? stone
+        : spirit;
   const palette = { ...palettes[type] };
   if (red) {
     palette.c = "#944b45";
@@ -254,16 +316,30 @@ export function drawSprite(
   }
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));
-  ctx.scale(facing * scale, scale);
+  ctx.scale(
+    (type === "explorer" ? (direction === "west" ? -1 : 1) : facing) * scale,
+    scale,
+  );
   for (let row = 0; row < matrix.length; row++)
     for (let col = 0; col < matrix[row].length; col++) {
       const char = matrix[row][col];
       if (char === ".") continue;
-      let offset = 0;
-      if (type !== "spirit" && row >= matrix.length - 4 && frame % 2)
+      let offset = 0,
+        lift = 0;
+      if (type === "explorer" && row >= matrix.length - 5 && frame % 2) {
+        const lead = frame === 1 ? -1 : 1;
+        if (direction === "east" || direction === "west")
+          offset = col < 8 ? lead * 2 : -lead * 2;
+        else lift = col < 8 ? lead : -lead;
+      } else if (
+        type !== "spirit" &&
+        type !== "explorer" &&
+        row >= matrix.length - 4 &&
+        frame % 2
+      )
         offset = col < 8 ? -1 : 1;
       ctx.fillStyle = palette[char];
-      ctx.fillRect(col - 8 + offset, row - matrix.length, 1, 1);
+      ctx.fillRect(col - 8 + offset, row - matrix.length + lift, 1, 1);
     }
   ctx.restore();
 }

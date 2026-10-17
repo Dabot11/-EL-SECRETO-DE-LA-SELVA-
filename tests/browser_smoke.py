@@ -116,6 +116,32 @@ with sync_playwright() as playwright:
     check("Dos teclas sostenidas dan prioridad a la última dirección",page.evaluate("app.game.players[0].x>=10.5 && app.game.players[0].y===5.5"))
     check("El tablero tiene 28 columnas y 20 filas",page.evaluate("app.game.map.width===28&&app.game.map.height===20"))
 
+    # Direction changes are committed by the real keyboard step, independently for both players.
+    page.evaluate("""() => {
+      const g=app.game;g.start(2,1);g.guards=[];g.traps=[];g.relics=[];
+      g.map.cells=g.map.cells.map((row,y)=>row.map((t,x)=>x===0||y===0||x===g.map.width-1||y===g.map.height-1?'#':'.'));g.map.revision++;
+      Object.assign(g.players[0],{x:6.5,y:6.5,motion:null});Object.assign(g.players[1],{x:12.5,y:6.5,motion:null});app.input.clear();
+    }""")
+    page.locator('#game-canvas').focus()
+    for blue,red,direction in [('w','ArrowUp','north'),('d','ArrowRight','east'),('s','ArrowDown','south'),('a','ArrowLeft','west')]:
+        page.keyboard.press(blue)
+        page.keyboard.press(red)
+        page.wait_for_timeout(350)
+        check(f"Ambos exploradores conservan la vista {direction} al terminar su paso",page.evaluate("""async direction=>{
+          const {explorerPose}=await import('/src/explorer-animation.js');
+          return app.game.players.every(p=>!p.motion&&explorerPose(p).direction===direction&&explorerPose(p).frame===0);
+        }""",direction))
+    check("Las piernas tienen poses distintas en las cuatro direcciones y ambos colores",page.evaluate("""async()=>{
+      const {drawSprite,explorersReady}=await import('/src/sprites.js');
+      if(!explorersReady)return false;
+      const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;const c=canvas.getContext('2d');
+      for(const red of [false,true])for(const direction of ['north','south','east','west']) {
+        const poses=[0,1,3].map(frame=>{c.clearRect(0,0,64,64);drawSprite(c,'explorer',32,62,{red,direction,frame,scale:2});return Array.from(c.getImageData(0,46,64,18).data).join(',');});
+        if(new Set(poses).size!==3)return false;
+      }
+      return true;
+    }"""))
+
     # Deterministic interaction fixtures exercise the rendered game and HUD.
     page.evaluate("""() => {
       const g=app.game;g.start(2);g.guards=[];

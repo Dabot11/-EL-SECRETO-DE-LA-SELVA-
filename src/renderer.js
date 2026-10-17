@@ -10,6 +10,7 @@ import { ENEMIES, trapPhase } from "./challenges.js";
 import { THEMES } from "./missions.js";
 import { drawSprite, drawArt } from "./sprites.js";
 import { renderPosition, sameTile } from "./grid.js";
+import { explorerPose } from "./explorer-animation.js";
 import { paintTerrain, paintWater, paintAtmosphere } from "./terrain.js";
 const S = CONFIG.tileWidth;
 export const toScreen = (x, y) => ({
@@ -195,12 +196,16 @@ export class Renderer {
       windup && body.attack ? 1 - body.attackTimer / body.attack.duration : 0;
     const float =
       type === "spirit" && !reduced ? Math.sin(this.time * 3 + body.id) * 2 : 0;
+    const explorer = type === "explorer";
     const bob =
-      type === "spirit" ? float : stride * (type === "warden" ? 0.8 : 2);
-    const squish = reduced ? 0 : windup ? anticipation * 0.1 : stride * -0.035;
+      type === "spirit"
+        ? float
+        : stride * (explorer ? 0.5 : type === "warden" ? 0.8 : 2);
+    const squish =
+      reduced || explorer ? 0 : windup ? anticipation * 0.1 : stride * -0.035;
     c.save();
     c.translate(screen.x, screen.y + 9 - bob);
-    if (!reduced)
+    if (!reduced && !explorer)
       c.rotate(
         body.state === GuardState.STUNNED
           ? Math.sin(this.time * 6) * 0.045
@@ -211,6 +216,9 @@ export class Renderer {
       ...options,
       facing: body.facing,
       frame: !reduced && body.motion && step > 0.25 && step < 0.8 ? 1 : 0,
+      ...(explorer
+        ? explorerPose(body, reduced || body.state === PlayerState.CAPTURED)
+        : {}),
     });
     c.restore();
   }
@@ -418,7 +426,11 @@ export class Renderer {
           "explorer",
           start.x + (s.x - start.x) * t,
           start.y + (s.y - start.y) * t + 9,
-          { red: p.id === 1, scale: 1.5, facing: p.facing },
+          {
+            red: p.id === 1,
+            scale: 1.5,
+            ...explorerPose(p, this.reducedMotion.matches),
+          },
         );
         c.restore();
       }

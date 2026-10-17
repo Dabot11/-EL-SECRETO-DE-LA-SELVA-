@@ -2,7 +2,7 @@
 
 Una aventura de **David y Tavito**, para uno o dos jugadores en la misma computadora.
 
-**Versión 5.3:** nueva presentación de la aventura: menú amplio, vistas previas de los diez mapas, etapas del objetivo y tarjetas de habilidades con recarga visual. La selva incorpora suelo desgastado, musgo, orillas, antorchas, reflejos y animaciones de personajes y recompensas. Se conservan las diez misiones, la cámara desde arriba, las casillas y las reglas de solitario y dúo.
+**Versión 5.4:** los dos exploradores estrenan caminata direccional. Al subir se ve la espalda y la mochila; al bajar, la cara; a los lados, el perfil correspondiente. Piernas y brazos alternan con cada paso, y al detenerse conservan la orientación. Se mantienen las diez misiones, las reglas y el progreso guardado.
 
 Los enemigos, sus patrullas y sus embestidas también avanzan por casillas. Los avisos muestran los cuadros que puede golpear cada ataque. La cámara mantiene el mapa completo visible para ambos jugadores.
 
@@ -19,7 +19,8 @@ Al iniciar una partida en laptop, el tablero ocupa toda la ventana y se ajusta a
 - La campaña muestra una miniatura de la geometría de cada destino, su dificultad, disponibilidad y récords.
 - El panel separa misión, etapas **Abre → Recoge → Vuelve**, vidas y habilidades. Cada herramienta muestra su tecla, cuenta regresiva y barra de recarga; el pase se habilita visualmente para el portador.
 - Suelos con variaciones, piedra agrietada, musgo, puentes con tablones y orillas sombreadas. Cada región mantiene su propia paleta.
-- Pasos con movimiento del cuerpo y polvo, estelas de impulso, anticipación de ataques, espíritus flotantes, vegetación, agua y antorchas animadas. Los avisos de ataque se dibujan sobre la vegetación y conservan sus casillas exactas.
+- Los exploradores usan 24 dibujos: frente, espalda y perfil, con cuatro poses por vista y color; el perfil izquierdo refleja el derecho. El ciclo alterna piernas por casilla y conserva su ritmo al llevar la reliquia, ralentizarse o usar el impulso. La cabeza mantiene un anclaje estable.
+- Pasos con movimiento de piernas y polvo, estelas de impulso, anticipación de ataques, espíritus flotantes, vegetación, agua y antorchas animadas. Los avisos de ataque se dibujan sobre la vegetación y conservan sus casillas exactas.
 - Efectos y mensajes breves distintos para runas, tesoros, combos, golpes, curación y rescates.
 - La pausa congela también el escenario. Se respeta **Reducir movimiento** del sistema: desaparecen balanceos, estelas y partículas decorativas; los controles y avisos esenciales siguen funcionando.
 
@@ -124,4 +125,4 @@ El workflow `.github/workflows/pages.yml` prueba y publica los cambios de `main`
 
 ## Organización
 
-`src/game.js` coordina la partida; `abilities.js` resuelve herramientas y pases; `ai.js` controla guardianes. `missions.js`, `challenges.js` y `map.js` definen geometría y objetivos. `grid.js` limita los pasos a vecinos cardinales y anima la transición; `collisions.js` y `navigation.js` gestionan obstáculos y rutas. `renderer.js`, `terrain.js` y `sprites.js` dibujan; `input.js` y `ui.js` conectan teclado e interfaz. `progress.js` guarda el avance; `audio.js` sintetiza la música y los efectos.
+`src/game.js` coordina la partida; `abilities.js` resuelve herramientas y pases; `ai.js` controla guardianes. `missions.js`, `challenges.js` y `map.js` definen geometría y objetivos. `grid.js` limita los pasos a vecinos cardinales y anima la transición; `collisions.js` y `navigation.js` gestionan obstáculos y rutas. `renderer.js`, `terrain.js` y `sprites.js` dibujan; `explorer-sprites.js` carga y alinea las poses de `assets/explorer-walk.png`, y `explorer-animation.js` sincroniza orientación y piernas con cada paso; `input.js` y `ui.js` conectan teclado e interfaz. `progress.js` guarda el avance; `audio.js` sintetiza la música y los efectos.
