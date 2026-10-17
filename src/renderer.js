@@ -11,6 +11,7 @@ import { THEMES } from "./missions.js";
 import { drawSprite, drawArt } from "./sprites.js";
 import { renderPosition, sameTile } from "./grid.js";
 import { explorerPose } from "./explorer-animation.js";
+import { enemyPose } from "./enemy-animation.js";
 import { paintTerrain, paintWater, paintAtmosphere } from "./terrain.js";
 const S = CONFIG.tileWidth;
 export const toScreen = (x, y) => ({
@@ -173,7 +174,12 @@ export class Renderer {
     const step = body.motion
       ? 1 - body.motion.remaining / body.motion.duration
       : 0;
-    const stride = reduced ? 0 : Math.sin(step * Math.PI);
+    const stopped = [
+      GuardState.STUNNED,
+      GuardState.WINDUP,
+      GuardState.RECOVER,
+    ].includes(body.state);
+    const stride = reduced || stopped ? 0 : Math.sin(step * Math.PI);
     if (body.motion && this.lastMotion.get(body) !== body.motion) {
       this.lastMotion.set(body, body.motion);
       if (!reduced && type !== "spirit") {
@@ -195,30 +201,26 @@ export class Renderer {
     const anticipation =
       windup && body.attack ? 1 - body.attackTimer / body.attack.duration : 0;
     const float =
-      type === "spirit" && !reduced ? Math.sin(this.time * 3 + body.id) * 2 : 0;
+      type === "spirit" && !reduced && !stopped
+        ? Math.sin(this.time * 3 + body.id) * 2
+        : 0;
     const explorer = type === "explorer";
     const bob =
       type === "spirit"
         ? float
-        : stride * (explorer ? 0.5 : type === "warden" ? 0.8 : 2);
-    const squish =
-      reduced || explorer ? 0 : windup ? anticipation * 0.1 : stride * -0.035;
+        : stride * (explorer ? 0.5 : type === "warden" ? 0.45 : 0.8);
+    const squish = reduced || explorer ? 0 : windup ? anticipation * 0.1 : 0;
     c.save();
     c.translate(screen.x, screen.y + 9 - bob);
-    if (!reduced && !explorer)
-      c.rotate(
-        body.state === GuardState.STUNNED
-          ? Math.sin(this.time * 6) * 0.045
-          : stride * 0.025 * (body.facing || 1),
-      );
+    if (!reduced && !explorer && body.state === GuardState.STUNNED)
+      c.rotate(Math.sin(this.time * 6) * 0.045);
     c.scale(1 + squish, 1 - squish);
     drawSprite(c, type, 0, 0, {
       ...options,
       facing: body.facing,
-      frame: !reduced && body.motion && step > 0.25 && step < 0.8 ? 1 : 0,
       ...(explorer
         ? explorerPose(body, reduced || body.state === PlayerState.CAPTURED)
-        : {}),
+        : enemyPose(body, reduced, this.time)),
     });
     c.restore();
   }

@@ -1,5 +1,7 @@
 import { loadExplorerSprites, drawExplorerAtlas } from "./explorer-sprites.js";
+import { loadEnemySprites, drawEnemyAtlas } from "./enemy-sprites.js";
 export { explorersReady } from "./explorer-sprites.js";
+export { enemySpritesReady } from "./enemy-sprites.js";
 // Local illustrated atlases; matrix sprites remain as a loading fallback.
 export let atlasReady = false;
 let atlas = null;
@@ -8,7 +10,11 @@ let guardianAtlas = null;
 const guardianFrames = [];
 export let guardiansReady = false;
 export async function loadSprites() {
-  await Promise.allSettled([loadWorldSprites(), loadExplorerSprites()]);
+  await Promise.allSettled([
+    loadWorldSprites(),
+    loadExplorerSprites(),
+    loadEnemySprites(),
+  ]);
 }
 async function loadWorldSprites() {
   atlas = new Image();
@@ -269,6 +275,7 @@ export function drawSprite(
     drawExplorerAtlas(ctx, x, y, { red, frame, scale, direction })
   )
     return;
+  if (drawEnemyAtlas(ctx, type, x, y, { frame, scale, direction })) return;
   if (type === "hunter" || type === "warden") {
     if (guardiansReady) {
       const f = guardianFrames[(type === "warden" ? 2 : 0) + (frame % 2)],

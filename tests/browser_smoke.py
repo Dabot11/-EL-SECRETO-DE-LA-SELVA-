@@ -142,6 +142,35 @@ with sync_playwright() as playwright:
       return true;
     }"""))
 
+    check("Los cuatro enemigos cargan sus vistas y ciclos completos",page.evaluate("""async()=>{
+      const {enemySpritesReady}=await import('/src/sprites.js');
+      return ['stone','hunter','spirit','warden'].every(enemySpritesReady);
+    }"""))
+    check("Cada enemigo tiene frente, espalda, perfiles y cuatro poses visibles",page.evaluate("""async()=>{
+      const {drawSprite}=await import('/src/sprites.js');
+      const canvas=document.createElement('canvas');canvas.width=128;canvas.height=96;
+      const c=canvas.getContext('2d',{willReadFrequently:true});
+      for(const type of ['stone','hunter','spirit','warden']) {
+        const views=[];
+        for(const direction of ['south','north','east','west']) {
+          const feet=[];
+          for(let frame=0;frame<4;frame++) {
+            c.clearRect(0,0,128,96);drawSprite(c,type,64,85,{direction,frame,scale:2.5});
+            const rgba=c.getImageData(0,0,128,96).data;
+            let count=0;
+            for(let y=0;y<96;y++)for(let x=0;x<128;x++)if(rgba[(y*128+x)*4+3]>175){
+              if(x===0||x===127||y===0||y===95)return false;count++;
+            }
+            if(count<200)return false;
+            if(!frame)views.push(canvas.toDataURL());
+            feet.push(Array.from(c.getImageData(0,63,128,23).data).join(','));
+          }
+          if(new Set(feet).size!==4)return false;
+        }
+        if(new Set(views).size!==4)return false;
+      }
+      return true;
+    }"""))
     # Deterministic interaction fixtures exercise the rendered game and HUD.
     page.evaluate("""() => {
       const g=app.game;g.start(2);g.guards=[];

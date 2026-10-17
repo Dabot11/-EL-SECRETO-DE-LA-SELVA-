@@ -2,7 +2,7 @@
 
 Una aventura de **David y Tavito**, para uno o dos jugadores en la misma computadora.
 
-**Versión 5.4:** los dos exploradores estrenan caminata direccional. Al subir se ve la espalda y la mochila; al bajar, la cara; a los lados, el perfil correspondiente. Piernas y brazos alternan con cada paso, y al detenerse conservan la orientación. Se mantienen las diez misiones, las reglas y el progreso guardado.
+**Versión 5.5:** los cuatro enemigos también tienen frente, espalda y perfiles con ciclos propios: pasos de piedra, zancadas del jaguar y estela animada del espíritu. Se orientan con cada paso; el jaguar mira hacia su salto anunciado y los guardianes dejan de caminar al preparar un ataque o quedar aturdidos. Los dos exploradores conservan su caminata direccional.
 
 Los enemigos, sus patrullas y sus embestidas también avanzan por casillas. Los avisos muestran los cuadros que puede golpear cada ataque. La cámara mantiene el mapa completo visible para ambos jugadores.
 
@@ -125,4 +125,4 @@ El workflow `.github/workflows/pages.yml` prueba y publica los cambios de `main`
 
 ## Organización
 
-`src/game.js` coordina la partida; `abilities.js` resuelve herramientas y pases; `ai.js` controla guardianes. `missions.js`, `challenges.js` y `map.js` definen geometría y objetivos. `grid.js` limita los pasos a vecinos cardinales y anima la transición; `collisions.js` y `navigation.js` gestionan obstáculos y rutas. `renderer.js`, `terrain.js` y `sprites.js` dibujan; `explorer-sprites.js` carga y alinea las poses de `assets/explorer-walk.png`, y `explorer-animation.js` sincroniza orientación y piernas con cada paso; `input.js` y `ui.js` conectan teclado e interfaz. `progress.js` guarda el avance; `audio.js` sintetiza la música y los efectos.
+`src/game.js` coordina la partida; `abilities.js` resuelve herramientas y pases; `ai.js` controla guardianes. `missions.js`, `challenges.js` y `map.js` definen geometría y objetivos. `grid.js` limita los pasos a vecinos cardinales y anima la transición; `collisions.js` y `navigation.js` gestionan obstáculos y rutas. `renderer.js`, `terrain.js` y `sprites.js` dibujan; `explorer-sprites.js` carga y alinea las poses de `assets/explorer-walk.png`, y `explorer-animation.js` sincroniza orientación y piernas con cada paso; `enemy-sprites.js` carga por separado los cuatro atlas de enemigos y `enemy-animation.js` sincroniza sus vistas con patrullas, ataques y estados; `input.js` y `ui.js` conectan teclado e interfaz. `progress.js` guarda el avance; `audio.js` sintetiza la música y los efectos.

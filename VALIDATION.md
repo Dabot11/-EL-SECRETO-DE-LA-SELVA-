@@ -1,11 +1,11 @@
-# Verificación · versión 5.4
+# Verificación · versión 5.5
 
 Node.js 24.19.0, Python 3.12.14 y Chromium 154.0.8037.57 en Linux.
 
 | Comprobación        | Resultado                                                                                                                                                                                                             |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm test`          | 94 pruebas de reglas, regresión, guardado y recorridos                                                                                                                                                                |
-| Prueba de navegador | 191 comprobaciones con Chromium                                                                                                                                                                                       |
+| `npm test`          | 98 pruebas de reglas, regresión, guardado y recorridos                                                                                                                                                                |
+| Prueba de navegador | 193 comprobaciones con Chromium                                                                                                                                                                                       |
 | Campaña             | Diez misiones × dos modalidades × con/sin tres tesoros: cuarenta escenarios terminados                                                                                                                                |
 | Solo                | Un personaje, tres corazones, protección entre golpes, curación interrumpible, alarma que impide curarse, derrota y reintento                                                                                         |
 | Dúo                 | Roles, combo, pases en ambos sentidos, recarga, paredes, distancia, receptor capturado, caída y rescate                                                                                                               |
@@ -37,6 +37,15 @@ CHROMIUM_PATH=/usr/bin/chromium python3 tests/browser_smoke.py
 El navegador usa clics y eventos de teclado reales para controles. Los recorridos completos se dirigen mediante entradas de `Game.update`; no son una grabación de pulsaciones físicas. Las pruebas aisladas preparan posiciones controladas para comprobar una regla, separadas de las campañas completas sin alteraciones de posición o protección.
 
 Las capturas y el informe JSON se generan en `test-results/`, ignorado por Git. Se inspeccionan menú, ayuda, solo, dúo, puente, combos, pases y resultados. El servidor local verifica comportamiento; GitHub Actions vuelve a ejecutar las pruebas de Node antes de publicar. El despliegue se contrasta aparte con los archivos del sitio público.
+
+## Verificación de las animaciones de enemigos
+
+- Los cuatro tipos recorren patrullas reales en las cuatro direcciones, con cuatro poses; consultar la pose no modifica el estado de la IA.
+- El jaguar gira hacia las casillas anunciadas antes de saltar y conserva esa orientación durante el salto y la recuperación. Las casillas de ataque permanecen iguales.
+- Aturdimiento, preparación de ataque y recuperación detienen los pasos. El espíritu tiene un ciclo propio de estela que respeta pausa y movimiento reducido.
+- El navegador confirma que cargan los cuatro atlas, que cada vista y pose es distinta, que se mueven piernas/estelas y que no se recortan los dibujos.
+- Revisión visual de 64 combinaciones de enemigo, dirección y pose, ampliadas y a escala de juego, además de la misión 10 a 1366×768. Capturas: `test-results/enemy-poses.png` y `enemy-mission-10.png`.
+- Carga normal, imagen del jaguar bloqueada y los cuatro atlas nuevos bloqueados: los demás recursos cargan independientemente, las patrullas siguen funcionando, la pausa congela el Canvas y no hay errores JavaScript. Con movimiento reducido se conserva la orientación y se omiten los ciclos. Informe: `test-results/enemy-extra.json`.
 
 ## Verificación de la caminata direccional
 
@@ -79,4 +88,4 @@ Las capturas y el informe JSON se generan en `test-results/`, ignorado por Git. 
 
 ## Límites
 
-Las pruebas comprueban reglas, rutas y presentación; la diversión y dificultad necesitan prueba con David y Tavito. Esta versión añade caminata direccional a los exploradores y conserva las diez misiones sin modificar el balance; la dificultad sigue creciendo mediante velocidades, detección, patrullas y distribución de objetivos. Safari y Firefox no se probaron. La vista estrecha se adapta, pero el juego requiere teclado. El guardado sigue siendo local y Continuar reinicia la misión pendiente. La prueba de audio verifica síntesis y volumen, no una evaluación auditiva humana.
+Las pruebas comprueban reglas, rutas y presentación; la diversión y dificultad necesitan prueba con David y Tavito. Esta versión extiende las animaciones direccionales a los cuatro enemigos y conserva las diez misiones sin modificar el balance; la dificultad sigue creciendo mediante velocidades, detección, patrullas y distribución de objetivos. Safari y Firefox no se probaron. La vista estrecha se adapta, pero el juego requiere teclado. El guardado sigue siendo local y Continuar reinicia la misión pendiente. La prueba de audio verifica síntesis y volumen, no una evaluación auditiva humana.
