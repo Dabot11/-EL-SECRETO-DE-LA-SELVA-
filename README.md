@@ -33,16 +33,16 @@ En Windows, el comando puede ser `py -m http.server 8080`. No abras `index.html`
 
 ## Publicar en GitHub Pages
 
-Este juego puede publicarse directamente desde la raíz de la rama `main`. No necesita una compilación, una base de datos ni un servidor Node en producción. El archivo `.nojekyll` indica a GitHub Pages que sirva los archivos estáticos tal como están.
+El workflow `.github/workflows/pages.yml` publica los cambios de la rama `main`. Primero ejecuta las pruebas, prepara los archivos estáticos y después los despliega en GitHub Pages. No necesita instalar paquetes, compilar el juego ni mantener un servidor Node en producción.
 
 En el repositorio `Dabot11/-EL-SECRETO-DE-LA-SELVA-`:
 
 1. Abre **Settings → Pages**.
-2. En **Build and deployment**, selecciona **Deploy from a branch**.
-3. Elige la rama **main** y la carpeta **/ (root)**.
-4. Pulsa **Save** y espera a que GitHub complete el despliegue de Pages.
+2. En **Build and deployment → Source**, selecciona **GitHub Actions**.
+3. Publica los cambios en `main`, o abre **Actions → Publicar El Secreto de la Selva → Run workflow** para publicar manualmente.
+4. Espera a que terminen los trabajos `build` y `deploy`.
 
-La dirección es `https://dabot11.github.io/-EL-SECRETO-DE-LA-SELVA-/`. Los cambios publicados en `main` actualizan la página automáticamente cuando termina el workflow **pages build and deployment** en Actions.
+La dirección es `https://dabot11.github.io/-EL-SECRETO-DE-LA-SELVA-/`. Los cambios publicados en `main` actualizan la página automáticamente cuando termina el workflow **Publicar El Secreto de la Selva**. El despliegue incluye HTML, CSS, módulos JavaScript, imágenes y la versión del paquete; los scripts de desarrollo y las pruebas quedan fuera del sitio público.
 
 ## Controles
 
