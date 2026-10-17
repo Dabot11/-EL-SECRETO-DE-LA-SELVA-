@@ -23,15 +23,16 @@ function steer(game, player, target) {
   return projectVector(waypoint.x - player.x, waypoint.y - player.y);
 }
 
-export function playJourney(game, mode) {
-  game.start(mode);
+export function playJourney(game, mode, missionIndex = 0, resume = false) {
+  if (!resume) game.start(mode, missionIndex);
   let captures = 0,
     rescues = 0,
     flags = 0,
     frames = 0;
   for (
     ;
-    frames < 18000 && game.state !== "VICTORY" && game.state !== "GAME_OVER";
+    frames < 18000 &&
+    !["VICTORY", "MISSION_COMPLETE", "GAME_OVER"].includes(game.state);
     frames++
   ) {
     const [a, b] = game.players;
@@ -62,9 +63,11 @@ export function playJourney(game, mode) {
     game.events = [];
   }
   // Keep the real victory effect visible when this helper is used in the browser.
-  if (game.state === "VICTORY") game.emit("victory", game.map.base);
+  if (["VICTORY", "MISSION_COMPLETE"].includes(game.state))
+    game.emit("victory", game.map.base);
   return {
     mode,
+    missionIndex: game.missionIndex,
     state: game.state,
     attempts: game.attempts,
     frames,

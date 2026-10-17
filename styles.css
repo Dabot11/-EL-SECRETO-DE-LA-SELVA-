@@ -123,7 +123,7 @@ button[hidden],
 .game-shell {
   position: relative;
   isolation: isolate;
-  aspect-ratio: 768/432;
+  aspect-ratio: 960/600;
   border: 1px solid #496043;
   background: #0d2a25;
   box-shadow: 0 24px 70px #06191155;
@@ -931,5 +931,202 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   button {
     transition: none;
+  }
+}
+
+/* Campaign and sound controls */
+.audio-settings {
+  margin-top: 20px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.audio-settings summary {
+  cursor: pointer;
+  list-style: none;
+  width: fit-content;
+  padding: 9px 13px;
+  border: 1px solid var(--border);
+  color: var(--cream);
+  background: #19382c;
+}
+.audio-settings summary::after {
+  content: " +";
+  padding-left: 12px;
+  color: var(--gold);
+}
+.audio-settings[open] summary::after {
+  content: " −";
+}
+.audio-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 22px;
+  padding: 17px;
+  background: #153428;
+  border: 1px solid var(--border);
+  margin-top: 7px;
+}
+.audio-controls label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--cream);
+}
+.audio-controls input {
+  accent-color: var(--lime);
+}
+.volume-control input {
+  width: 120px;
+}
+.audio-controls output {
+  min-width: 32px;
+}
+#audio-status {
+  font-size: 10px;
+  color: var(--muted);
+}
+.chapter-bar {
+  padding-top: 20px;
+}
+.campaign {
+  margin-top: 30px;
+}
+.campaign-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.campaign-heading h2 {
+  font:
+    normal 23px Georgia,
+    serif;
+  margin: 0;
+  color: var(--cream);
+}
+.campaign-heading > span {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+}
+.mission-route {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.mission-route li {
+  position: relative;
+  padding: 18px 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, #1c3a2e, #132e26);
+  min-height: 128px;
+}
+.route-number {
+  display: block;
+  font:
+    20px Georgia,
+    serif;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+.mission-route strong {
+  font-size: 11px;
+  display: block;
+  color: #dedcc1;
+  line-height: 1.5;
+}
+.mission-route small {
+  display: block;
+  font-size: 9px;
+  line-height: 1.5;
+  margin-top: 4px;
+  color: var(--muted);
+}
+.difficulty {
+  display: block;
+  letter-spacing: 3px;
+  font-size: 9px;
+  margin-top: 12px;
+  color: #cfb87c;
+}
+.difficulty > span {
+  color: #566a4b;
+}
+.mission-route li.current {
+  border-color: #b8c584;
+  background: #284737;
+}
+.mission-route li.completed::after {
+  content: "✓";
+  position: absolute;
+  top: 17px;
+  right: 14px;
+  color: var(--lime);
+}
+@media (min-width: 701px) {
+  .menu-screen {
+    background: linear-gradient(
+      90deg,
+      #102b25a0,
+      #102b2550 30%,
+      transparent 65%
+    );
+  }
+  .menu-copy {
+    top: 16%;
+  }
+  .menu-copy > p {
+    color: #d5dcc4;
+  }
+}
+@media (max-width: 700px) {
+  .audio-settings {
+    margin-top: 14px;
+  }
+  .audio-controls {
+    gap: 16px;
+  }
+  .campaign-heading > span {
+    display: none;
+  }
+  .mission-route {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .mission-route li:last-child {
+    grid-column: 1/-1;
+  }
+  .mission-route li {
+    min-height: 0;
+  }
+  .campaign-heading h2 {
+    font-size: 21px;
+  }
+  .game-shell:has(#menu[hidden]) #game-canvas {
+    object-fit: contain;
+  }
+  .game-shell:has(#menu[hidden]) {
+    background: #112b26;
+  }
+  .toast {
+    max-width: 85%;
+  }
+  .mission strong {
+    font-size: 10px;
+  }
+}
+
+@media (min-width: 701px) {
+  .page-shell {
+    max-width: min(1280px, calc((100svh - 220px) * 1.6 + 96px));
+  }
+  .game-shell {
+    container-type: inline-size;
+  }
+  .menu-copy h1 {
+    font-size: clamp(32px, 5.4cqw, 64px);
   }
 }

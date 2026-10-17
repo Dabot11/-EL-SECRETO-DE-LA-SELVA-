@@ -101,25 +101,94 @@ with sync_playwright() as playwright:
     page.locator("#play-solo").click()
     check("Selección de modo individual", page.evaluate("app.game.mode === 1 && app.game.state === 'PLAYING'"))
 
+    check("Arte pixelado cargado", page.evaluate("async()=> (await import('/src/sprites.js')).atlasReady && app.renderer.keyArtReady"))
+    check("Cinco destinos visibles", page.locator("#mission-route li").count() == 5)
     journeys = []
     for mode in [1, 2]:
-        result = page.evaluate("""async mode => {
-          const {playJourney}=await import('/tests/journey.js');
-          const result=playJourney(app.game,mode);app.ui.update();return result;
-        }""", mode)
-        journeys.append(result)
-        check(f"Partida completa en navegador, modo {mode}, guardianes activos", result["state"] == "VICTORY" and result["captures"] > 0 and result["rescues"] > 0)
-        check(f"Pantalla de victoria, modo {mode}", page.locator("#state-title").inner_text() == "¡MISIÓN COMPLETADA!")
+        if mode == 2:
+            page.locator("#state-menu").click()
+            page.locator("#play-duo").click()
+        for mission in range(5):
+            page.wait_for_timeout(100)
+            page.screenshot(path=str(OUTPUT / f"mission-{mission+1}-mode-{mode}.png"), full_page=True)
+            result = page.evaluate("""async args => {
+              const {playJourney}=await import('/tests/journey.js');
+              const result=playJourney(app.game,args.mode,args.mission,true);app.ui.update();return result;
+            }""", {"mode":mode,"mission":mission})
+            journeys.append(result)
+            expected = "VICTORY" if mission == 4 else "MISSION_COMPLETE"
+            check(f"Mapa {mission+1}, modo {mode}: bandera y regreso con guardianes activos", result["state"] == expected and result["captures"] > 0 and result["rescues"] > 0 and result["missionIndex"] == mission)
+            title="¡AVENTURA COMPLETADA!" if mission == 4 else "¡MISIÓN COMPLETADA!"
+            check(f"Resultado de misión {mission+1}, modo {mode}", page.locator("#state-title").inner_text() == title)
+            if mission < 4:
+                page.locator("#state-primary").click()
+                check(f"Avance al mapa {mission+2} sin perder el modo {mode}", page.evaluate(f"app.game.missionIndex === {mission+1} && app.game.mode === {mode} && app.game.attempts === 3 && app.game.state === 'PLAYING'"))
         page.wait_for_timeout(180)
         page.screenshot(path=str(OUTPUT / f"victory-mode-{mode}.png"), full_page=True)
-    page.locator("#state-menu").click()
+        check(f"Cinco misiones marcadas como completadas, modo {mode}", page.locator("#mission-route li.completed").count() == 5)
+    page.locator("#state-primary").click()
+    check("Rejugar la campaña empieza en el primer mapa", page.evaluate("app.game.missionIndex === 0 && app.game.state === 'PLAYING'"))
+
+    page.evaluate("""() => {
+      const g=app.game;g.start(2,3);g.guards=[];
+      for(let i=0;i<3;i++){
+        for(const p of g.players){p.protection=0;p.state='NORMAL';g.capture(p);}
+        g.checkOutcome();if(i<2)for(let n=0;n<140;n++)g.update(1/60);
+      }
+      app.ui.update();
+    }""")
+    page.locator("#state-primary").click()
+    check("Reintentar la misión 4 conserva ese mapa, el modo y restaura tres intentos", page.evaluate("app.game.missionIndex === 3 && app.game.mode === 2 && app.game.attempts === 3 && app.game.guards.length === 5"))
+
+    # Verify actual output samples, not just the existence of an AudioContext.
+    page.evaluate("""() => {
+      window.analyser=app.audio.context.createAnalyser();analyser.fftSize=2048;app.audio.master.connect(analyser);
+      window.peak=async (milliseconds=400)=>{
+        let maximum=0;const samples=new Float32Array(analyser.fftSize),until=performance.now()+milliseconds;
+        while(performance.now()<until){analyser.getFloatTimeDomainData(samples);for(const value of samples)maximum=Math.max(maximum,Math.abs(value));await new Promise(r=>setTimeout(r,20));}
+        return maximum;
+      };
+    }""")
+    check("La música genera señal de audio", page.evaluate("async()=>app.audio.context.state==='running' && app.audio.notesScheduled>0 && await peak()>0.001"))
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(1000)
+    check("La pausa silencia la música", page.evaluate("async()=>await peak()<0.00001"))
+    page.locator("#state-primary").click()
+    page.locator("#audio-settings summary").click()
+    page.locator("#music-toggle").uncheck()
+    page.locator("#effects-toggle").uncheck()
+    page.wait_for_timeout(1100)
+    check("Se pueden silenciar música y efectos", page.evaluate("async()=>!app.audio.settings.music && !app.audio.settings.effects && await peak()<0.00001"))
+    page.locator("#effects-toggle").check()
+    effect = page.evaluate("""async()=>{
+      const before=app.audio.effectsPlayed;app.audio.consume([{type:'rescue'}]);
+      return {peak:await peak(),count:app.audio.effectsPlayed-before};
+    }""")
+    check("Los efectos suenan con la música desactivada", effect["peak"] > .001 and effect["count"] == 1)
+    page.locator("#volume").fill("30")
+    page.locator("#volume").focus()
+    page.keyboard.press("ArrowRight")
+    check("Volumen accesible con teclado", page.locator("#volume").input_value() == "31" and page.evaluate("app.audio.settings.volume===.31 && app.input.keys.size===0"))
+    page.locator("#volume").fill("0")
+    page.wait_for_timeout(500)
+    check("Volumen cero silencia también los efectos", page.evaluate("async()=>{app.audio.consume([{type:'flag'}]);return await peak()<0.00001;}"))
+    page.locator("#volume").fill("31")
+    page.locator("#effects-toggle").uncheck()
+    page.wait_for_timeout(2200)
+    check("Las voces de audio terminadas se liberan", page.evaluate("app.audio.voices.size===0"))
+    page.locator("#effects-toggle").check()
+    page.reload(wait_until="networkidle")
+    page.evaluate("async()=>window.app=await import('/src/main.js')")
+    check("Preferencias de sonido conservadas al recargar", not page.locator("#music-toggle").is_checked() and page.locator("#effects-toggle").is_checked() and page.locator("#volume").input_value()=="31")
+    check("No hay reproducción automática antes de un gesto", page.evaluate("app.audio.context===null"))
     check("Volver al menú principal", page.locator("#menu").is_visible())
-    page.set_viewport_size({"width": 1024, "height": 768})
-    page.screenshot(path=str(OUTPUT / "menu-1024.png"), full_page=True)
-    check("Diseño sin desbordamiento horizontal a 1024px", page.evaluate("document.documentElement.scrollWidth <= innerWidth"))
-    page.set_viewport_size({"width": 390, "height": 844})
-    page.screenshot(path=str(OUTPUT / "menu-390.png"), full_page=True)
-    check("Página responsive sin desbordamiento horizontal", page.evaluate("document.documentElement.scrollWidth <= innerWidth"))
+    for width,height in [(1366,768),(1024,768),(390,844)]:
+        page.set_viewport_size({"width":width,"height":height})
+        page.screenshot(path=str(OUTPUT / f"menu-{width}.png"), full_page=True)
+        check(f"Diseño sin desbordamiento horizontal a {width}px",page.evaluate("document.documentElement.scrollWidth <= innerWidth"))
+        if width>700:
+            check(f"Todo el juego cabe en pantalla a {width}×{height}",page.locator(".game-shell").evaluate("e=>e.getBoundingClientRect().bottom<=innerHeight"))
+
     check("Sin errores JavaScript", not errors)
     check("Sin recursos faltantes", not failures)
     check("Todos los recursos del juego son locales", all(url.startswith(BASE) for url in requests))

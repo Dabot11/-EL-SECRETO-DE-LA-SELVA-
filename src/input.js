@@ -12,6 +12,11 @@ export class Input {
   constructor(onPause, onBlur) {
     this.keys = new Set();
     window.addEventListener("keydown", (e) => {
+      if (
+        e.target instanceof Element &&
+        e.target.closest("input, textarea, select")
+      )
+        return;
       if (MOVE_KEYS.has(e.code)) {
         e.preventDefault();
         this.keys.add(e.code);
@@ -22,7 +27,14 @@ export class Input {
       }
     });
     window.addEventListener("keyup", (e) => {
-      if (MOVE_KEYS.has(e.code)) e.preventDefault();
+      if (
+        MOVE_KEYS.has(e.code) &&
+        !(
+          e.target instanceof Element &&
+          e.target.closest("input, textarea, select")
+        )
+      )
+        e.preventDefault();
       this.keys.delete(e.code);
     });
     window.addEventListener("blur", () => {

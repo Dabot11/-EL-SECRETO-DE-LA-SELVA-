@@ -1,4 +1,65 @@
-// Original pixel sprites. Each character is a palette index; no remote images.
+// Local illustrated atlas; original matrix sprites remain as a loading fallback.
+export let atlasReady = false;
+let atlas = null;
+const frames = [];
+export async function loadSprites() {
+  atlas = new Image();
+  atlas.src = new URL("../assets/adventure-sprites.png", import.meta.url).href;
+  await atlas.decode();
+  const canvas = document.createElement("canvas");
+  canvas.width = atlas.width;
+  canvas.height = atlas.height;
+  const c = canvas.getContext("2d", { willReadFrequently: true });
+  c.drawImage(atlas, 0, 0);
+  const pixels = c.getImageData(0, 0, atlas.width, atlas.height).data,
+    cw = atlas.width / 4,
+    ch = atlas.height / 2;
+  for (let cell = 0; cell < 8; cell++) {
+    const left = (cell % 4) * cw,
+      top = Math.floor(cell / 4) * ch;
+    let minX = left + cw,
+      minY = top + ch,
+      maxX = left,
+      maxY = top;
+    for (let y = top; y < top + ch; y++)
+      for (let x = left; x < left + cw; x++)
+        if (pixels[(y * atlas.width + x) * 4 + 3] > 175) {
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+    frames.push({
+      x: Math.max(left, minX - 3),
+      y: Math.max(top, minY - 3),
+      w: Math.min(cw, maxX - minX + 7),
+      h: Math.min(ch, maxY - minY + 7),
+    });
+  }
+  atlasReady = true;
+}
+export function drawArt(ctx, cell, x, y, height, facing = 1) {
+  if (!atlasReady) return false;
+  const f = frames[cell],
+    width = Math.round((height * f.w) / f.h);
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(y));
+  ctx.scale(facing, 1);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(
+    atlas,
+    f.x,
+    f.y,
+    f.w,
+    f.h,
+    -Math.round(width / 2),
+    -height,
+    width,
+    height,
+  );
+  ctx.restore();
+  return true;
+}
 const explorer = [
   "......hhhh......",
   ".....hHHHHh.....",
@@ -99,6 +160,16 @@ export function drawSprite(
   y,
   { red = false, frame = 0, facing = 1, scale = 1 } = {},
 ) {
+  if (atlasReady) {
+    const cell =
+      type === "explorer"
+        ? (red ? 2 : 0) + (frame % 2)
+        : type === "stone"
+          ? 4 + (frame % 2)
+          : 6;
+    drawArt(ctx, cell, x, y, Math.round(22 * scale), facing);
+    return;
+  }
   const matrix =
     type === "explorer" ? explorer : type === "stone" ? stone : spirit;
   const palette = { ...palettes[type] };

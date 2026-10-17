@@ -14,6 +14,9 @@ export function createGuards(map) {
   return map.patrols.map((data, id) => ({
     id,
     type: data.type,
+    speed: map.mission.speed + (data.type === "spirit" ? 3 : 0),
+    detectionRange: map.mission.detection,
+    searchTime: map.mission.search,
     route: data.route.map(([x, y]) => ({ x: x + 0.5, y: y + 0.5 })),
     x: data.route[0][0] + 0.5,
     y: data.route[0][1] + 0.5,

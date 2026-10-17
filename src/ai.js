@@ -3,7 +3,12 @@ import { distance, hasLineOfSight, canTravelStraight } from "./collisions.js";
 import { navigate, findPath } from "./navigation.js";
 import { isBush } from "./map.js";
 
-export function canDetect(guard, player, map, range = CONFIG.detectionRange) {
+export function canDetect(
+  guard,
+  player,
+  map,
+  range = guard.detectionRange ?? CONFIG.detectionRange,
+) {
   return (
     player.state !== PlayerState.CAPTURED &&
     player.protection <= 0 &&
@@ -23,8 +28,8 @@ export function updateGuard(guard, game, dt) {
         p,
         map,
         guard.state === GuardState.CHASE
-          ? CONFIG.loseRange
-          : CONFIG.detectionRange,
+          ? (guard.detectionRange ?? CONFIG.detectionRange) + 1.25
+          : (guard.detectionRange ?? CONFIG.detectionRange),
       ),
     )
     .sort((a, b) => distance(guard, a) - distance(guard, b))[0];
@@ -39,7 +44,7 @@ export function updateGuard(guard, game, dt) {
   } else if (guard.state === GuardState.CHASE) {
     guard.state = GuardState.SEARCH;
     guard.target = null;
-    guard.searchTimer = CONFIG.searchTime;
+    guard.searchTimer = guard.searchTime ?? CONFIG.searchTime;
   }
   let target;
   switch (guard.state) {
@@ -72,7 +77,8 @@ export function updateGuard(guard, game, dt) {
     navigate(
       guard,
       target,
-      guard.type === "stone" ? CONFIG.stoneSpeed : CONFIG.spiritSpeed,
+      guard.speed ??
+        (guard.type === "stone" ? CONFIG.stoneSpeed : CONFIG.spiritSpeed),
       dt,
       map,
     );

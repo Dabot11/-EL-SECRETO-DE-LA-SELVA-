@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#102c26" />
     <meta
       name="description"
-      content="Una aventura cooperativa de David y Tavito. Explora un templo perdido, esquiva guardianes y recupera la bandera junto a tu compañero."
+      content="Una aventura cooperativa de David y Tavito. Explora cinco mapas distintos, esquiva guardianes y recupera la bandera junto a tu compañero."
     />
     <title>El Secreto de la Selva · Una aventura cooperativa</title>
     <link rel="icon" href="./assets/leaf.svg" type="image/svg+xml" />
@@ -27,21 +27,47 @@
             ></span
           >
         </a>
-        <span class="edition"><i></i> HECHO PARA JUGAR JUNTOS</span>
+        <span class="edition"><i></i> PIXEL ART · AVENTURA 2.0</span>
       </header>
 
       <main>
+        <details class="audio-settings" id="audio-settings">
+          <summary>♫ Música y sonido</summary>
+          <div class="audio-controls">
+            <label
+              ><input type="checkbox" id="music-toggle" checked /> Música</label
+            >
+            <label
+              ><input type="checkbox" id="effects-toggle" checked />
+              Efectos</label
+            >
+            <label class="volume-control" for="volume"
+              >Volumen
+              <input
+                id="volume"
+                type="range"
+                min="0"
+                max="100"
+                value="55"
+              /><output id="volume-value" for="volume">55%</output></label
+            >
+            <span id="audio-status" role="status"
+              >El sonido comienza al jugar.</span
+            >
+          </div>
+        </details>
         <div class="chapter-bar">
-          <span><b>01</b> EL TEMPLO PERDIDO</span
+          <span id="chapter-name"
+            ><b>01—05</b> CINCO MISIONES, UN GRAN SECRETO</span
           ><span>EXPLORA · ESCÓNDETE · RESCATA</span>
         </div>
         <section class="game-shell" aria-label="El Secreto de la Selva">
           <canvas
             id="game-canvas"
-            width="768"
-            height="432"
+            width="960"
+            height="600"
             tabindex="0"
-            aria-label="Mapa isométrico del templo. Jugador uno: WASD. Jugador dos: flechas. Escape para pausar."
+            aria-label="Mapa isométrico de la misión. Jugador uno: WASD. Jugador dos: flechas. Escape para pausar."
             >Tu navegador necesita soporte para Canvas 2D para jugar.</canvas
           >
 
@@ -55,8 +81,8 @@
                 ><span class="title-dot">.</span>
               </h1>
               <p>
-                Un templo olvidado. Una bandera mágica.<br />Y una aventura que
-                solo termina juntos.
+                Cinco mapas. Una bandera mágica.<br />Y una aventura que solo
+                termina juntos.
               </p>
               <div class="menu-buttons">
                 <button id="play-solo" class="button primary">
@@ -86,7 +112,7 @@
           <div id="hud" class="hud" hidden>
             <div class="hud-top">
               <div class="mission">
-                <small>LA MISIÓN</small
+                <small id="mission-progress">MISIÓN 1 DE 5</small
                 ><strong id="objective">Encuentra la bandera</strong
                 ><span id="flag-status">⚑ En el pedestal</span>
               </div>
@@ -189,8 +215,8 @@
                 <p>
                   <b>03</b
                   ><span
-                    ><strong>Cuiden sus tres intentos.</strong> Solo pierden uno
-                    si ambos quedan atrapados.</span
+                    ><strong>Cuiden sus tres intentos.</strong> Tienen tres por
+                    misión. Solo pierden uno si ambos quedan atrapados.</span
                   >
                 </p>
               </div>
@@ -242,6 +268,13 @@
           </div>
         </section>
 
+        <section class="campaign" aria-label="Las cinco misiones">
+          <div class="campaign-heading">
+            <h2>El camino al secreto</h2>
+            <span>CADA MAPA, UN NUEVO RETO</span>
+          </div>
+          <ol id="mission-route" class="mission-route"></ol>
+        </section>
         <div class="adventure-notes" aria-label="Consejos de la aventura">
           <div class="adventure-note">
             <span class="note-icon leaf-icon">❧</span>
@@ -273,7 +306,7 @@
         <span
           >UNA IDEA DE DAVID Y TAVITO <span class="footer-star">✦</span> HECHA
           PARA EXPLORAR</span
-        ><span>AVENTURA 01 <span class="footer-divider">/</span> V.1.0</span>
+        ><span>5 MISIONES <span class="footer-divider">/</span> V.2.0</span>
       </footer>
     </div>
     <script type="module" src="./src/main.js"></script>

@@ -362,7 +362,7 @@ test("la victoria exige bandera, ambos libres y ambos en la entrada", () => {
   assert.equal(g.state, GameState.PLAYING);
   g.rescue();
   g.checkOutcome();
-  assert.equal(g.state, GameState.VICTORY);
+  assert.equal(g.state, GameState.MISSION_COMPLETE);
 });
 
 test("el compañero IA completa el regreso a la base", () => {
@@ -371,7 +371,7 @@ test("el compañero IA completa el regreso a la base", () => {
   Object.assign(g.flag, { state: FlagState.CARRIED, carrier: 0 });
   position(g.players[1], 6.5, 10.5);
   tick(g, 10);
-  assert.equal(g.state, GameState.VICTORY);
+  assert.equal(g.state, GameState.MISSION_COMPLETE);
 });
 
 test("pausar congela lógica, movimiento, guardianes y protección", () => {
@@ -418,7 +418,7 @@ test("la navegación física recorre ida y vuelta sin atascarse ni atravesar obs
 for (const mode of [1, 2])
   test(`partida completa, modo ${mode}: ida, captura, rescate, bandera y victoria con guardianes activos`, () => {
     const result = playJourney(new Game(), mode);
-    assert.equal(result.state, GameState.VICTORY);
+    assert.equal(result.state, GameState.MISSION_COMPLETE);
     assert.ok(result.attempts > 0);
     assert.ok(result.captures > 0);
     assert.ok(result.rescues > 0);

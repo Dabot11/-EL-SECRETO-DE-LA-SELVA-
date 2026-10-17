@@ -1,15 +1,37 @@
 import { GameState, PlayerState, FlagState } from "./config.js";
+import { MISSIONS } from "./missions.js";
 import { paintPortrait, drawSprite } from "./sprites.js";
 const $ = (id) => document.getElementById(id);
 export class UI {
-  constructor(game, input) {
+  constructor(game, input, audio) {
+    this.audio = audio;
     this.game = game;
     this.input = input;
     this.previousState = null;
     this.howOpen = false;
     this.lastToast = "";
-    paintPortrait($("portrait-blue"));
-    paintPortrait($("portrait-red"), true);
+    this.paintPortraits();
+    $("mission-route").innerHTML = MISSIONS.map(
+      (mission, i) =>
+        `<li data-mission="${i}"><span class="route-number">0${i + 1}</span><strong>${mission.name}</strong><small>${mission.subtitle}</small><span class="difficulty" aria-label="Dificultad ${i + 1} de 5">${"◆".repeat(i + 1)}<span>${"◇".repeat(4 - i)}</span></span></li>`,
+    ).join("");
+    for (const [id, key] of [
+      ["music-toggle", "music"],
+      ["effects-toggle", "effects"],
+    ]) {
+      $(id).checked = audio.settings[key];
+      $(id).onchange = () => {
+        audio.set(key, $(id).checked);
+        this.unlockAudio();
+      };
+    }
+    $("volume").value = Math.round(audio.settings.volume * 100);
+    $("volume-value").textContent = `${$("volume").value}%`;
+    $("volume").oninput = () => {
+      audio.set("volume", Number($("volume").value) / 100);
+      $("volume-value").textContent = `${$("volume").value}%`;
+      this.unlockAudio();
+    };
     $("play-solo").onclick = () => this.start(1);
     $("play-duo").onclick = () => this.start(2);
     $("how-to").onclick = () => this.showHow();
@@ -17,7 +39,17 @@ export class UI {
     $("pause").onclick = () => this.pause();
     $("state-primary").onclick = () => {
       if (game.state === GameState.PAUSED) this.pause();
-      else this.start(game.mode);
+      else if (game.state === GameState.MISSION_COMPLETE) {
+        input.clear();
+        game.nextMission();
+        this.unlockAudio();
+        this.update();
+        $("game-canvas").focus({ preventScroll: true });
+      } else
+        this.start(
+          game.mode,
+          game.state === GameState.GAME_OVER ? game.missionIndex : 0,
+        );
     };
     $("state-menu").onclick = () => {
       input.clear();
@@ -45,10 +77,21 @@ export class UI {
       }
     });
   }
-  start(mode) {
+  paintPortraits() {
+    paintPortrait($("portrait-blue"));
+    paintPortrait($("portrait-red"), true);
+  }
+  async unlockAudio() {
+    const available = await this.audio.unlock();
+    $("audio-status").textContent = available
+      ? "Tus preferencias se guardan en este navegador."
+      : "El audio no está disponible en este navegador.";
+  }
+  start(mode, missionIndex = 0) {
+    this.unlockAudio();
     this.input.clear();
     this.closeHow(false);
-    this.game.start(mode);
+    this.game.start(mode, missionIndex);
     this.update();
     $("game-canvas").focus({ preventScroll: true });
   }
@@ -77,6 +120,25 @@ export class UI {
     const g = this.game,
       state = g.state;
     $("menu").hidden = state !== GameState.MENU;
+    const menu = state === GameState.MENU;
+    $("chapter-name").textContent = menu
+      ? "01—05 · CINCO MISIONES, UN GRAN SECRETO"
+      : `0${g.missionIndex + 1} / 05 · ${g.map.mission.name.toUpperCase()}`;
+    $("mission-progress").textContent =
+      `MISIÓN ${g.missionIndex + 1} DE ${MISSIONS.length}`;
+    for (const item of $("mission-route").children) {
+      const index = Number(item.dataset.mission),
+        done =
+          !menu &&
+          (index < g.missionIndex ||
+            (index === g.missionIndex &&
+              [GameState.MISSION_COMPLETE, GameState.VICTORY].includes(state)));
+      item.classList.toggle("current", !menu && index === g.missionIndex);
+      item.classList.toggle("completed", done);
+      if (!menu && index === g.missionIndex)
+        item.setAttribute("aria-current", "step");
+      else item.removeAttribute("aria-current");
+    }
     $("hud").hidden = state === GameState.MENU;
     $("round-screen").hidden = state !== GameState.ROUND_RESET;
     $("round-description").textContent =
@@ -125,6 +187,7 @@ export class UI {
     }
     const modal = [
       GameState.PAUSED,
+      GameState.MISSION_COMPLETE,
       GameState.VICTORY,
       GameState.GAME_OVER,
     ].includes(state);
@@ -133,27 +196,36 @@ export class UI {
       this.previousState = state;
       if (modal) {
         const won = state === GameState.VICTORY,
+          completed = state === GameState.MISSION_COMPLETE,
           lost = state === GameState.GAME_OVER;
         $("state-eyebrow").textContent = won
           ? "EL SECRETO ESTABA EN HACERLO JUNTOS"
-          : lost
-            ? "CADA AVENTURA TRAE UN NUEVO COMIENZO"
-            : "UN MOMENTO PARA RESPIRAR";
+          : completed
+            ? `MISIÓN ${g.missionIndex + 1} DE 5 · ${g.map.mission.name.toUpperCase()}`
+            : lost
+              ? "CADA AVENTURA TRAE UN NUEVO COMIENZO"
+              : "UN MOMENTO PARA RESPIRAR";
         $("state-title").textContent = won
-          ? "¡MISIÓN COMPLETADA!"
-          : lost
-            ? "¡MISIÓN FALLIDA!"
-            : "Aventura en pausa";
+          ? "¡AVENTURA COMPLETADA!"
+          : completed
+            ? "¡MISIÓN COMPLETADA!"
+            : lost
+              ? "¡MISIÓN FALLIDA!"
+              : "Aventura en pausa";
         $("state-description").textContent = won
-          ? "¡Recuperaron la bandera y escaparon juntos del templo!"
-          : lost
-            ? "¡Los guardianes atraparon a los dos exploradores!"
-            : "La selva puede esperar. Continúen cuando estén listos.";
+          ? "¡Cinco banderas recuperadas y cinco mapas explorados juntos!"
+          : completed
+            ? `¡Recuperaron la bandera! Sigue ${MISSIONS[g.missionIndex + 1].name}, con tres nuevos intentos.`
+            : lost
+              ? `Pueden reintentar ${g.map.mission.name} sin volver a la primera misión.`
+              : "La selva puede esperar. Continúen cuando estén listos.";
         $("state-primary").textContent = won
           ? "Volver a jugar →"
-          : lost
-            ? "Reintentar →"
-            : "Continuar la aventura →";
+          : completed
+            ? "Siguiente misión →"
+            : lost
+              ? "Reintentar esta misión →"
+              : "Continuar la aventura →";
         $("state-primary").focus({ preventScroll: true });
       }
     }
@@ -163,7 +235,9 @@ export class UI {
     const c = $("result-art").getContext("2d");
     c.clearRect(0, 0, 180, 80);
     c.imageSmoothingEnabled = false;
-    const victory = this.game.state === GameState.VICTORY;
+    const victory = [GameState.VICTORY, GameState.MISSION_COMPLETE].includes(
+      this.game.state,
+    );
     for (let i = 0; i < 2; i++)
       drawSprite(
         c,

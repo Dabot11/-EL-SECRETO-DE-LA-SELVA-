@@ -1,11 +1,11 @@
 export const CONFIG = Object.freeze({
-  width: 768,
-  height: 432,
-  tileWidth: 36,
-  tileHeight: 18,
-  originX: 348,
-  originY: 65,
-  playerSpeed: 49,
+  width: 960,
+  height: 600,
+  tileWidth: 48,
+  tileHeight: 24,
+  originX: 430,
+  originY: 102,
+  playerSpeed: 64,
   stoneSpeed: 30,
   spiritSpeed: 33,
   bodyRadius: 0.19,
@@ -19,13 +19,13 @@ export const CONFIG = Object.freeze({
   resetTime: 2.2,
   attempts: 3,
   baseRadius: 1.55,
-  pathRefresh: 0.3,
 });
 export const GameState = Object.freeze({
   MENU: "MENU",
   PLAYING: "PLAYING",
   PAUSED: "PAUSED",
   ROUND_RESET: "ROUND_RESET",
+  MISSION_COMPLETE: "MISSION_COMPLETE",
   VICTORY: "VICTORY",
   GAME_OVER: "GAME_OVER",
 });

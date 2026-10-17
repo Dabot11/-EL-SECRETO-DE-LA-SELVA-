@@ -1,8 +1,10 @@
 # El Secreto de la Selva
 
-Una aventura cooperativa de **David y Tavito**, para uno o dos jugadores en la misma computadora. Exploren **El Templo Perdido**, recuperen la única bandera roja y vuelvan juntos a la entrada. Un nivel completo con inicio, victoria, derrota y tres intentos compartidos.
+Una aventura cooperativa de **David y Tavito**, para uno o dos jugadores en la misma computadora. La **versión 2** incluye cinco misiones con mapas distintos, dificultad progresiva, pixel art de aventura, música original y efectos de sonido.
 
-Hecho con HTML, CSS y JavaScript moderno sobre Canvas 2D. Los sprites, árboles, ruinas, agua y efectos son originales y se dibujan localmente. **No necesita cuentas, servicios externos, conexión a internet ni instalar paquetes para jugar.**
+[Jugar en GitHub Pages](https://dabot11.github.io/-EL-SECRETO-DE-LA-SELVA-/)
+
+Hecho con HTML, CSS y JavaScript sobre Canvas 2D. El arte se carga desde archivos del proyecto y el audio se sintetiza con Web Audio. No necesita cuentas, servicios externos ni paquetes para jugar desde un servidor local. La página publicada necesita conexión para descargar sus archivos.
 
 ## Ejecutar en tu computadora
 
@@ -40,7 +42,7 @@ En el repositorio `Dabot11/-EL-SECRETO-DE-LA-SELVA-`:
 3. Elige la rama **main** y la carpeta **/ (root)**.
 4. Pulsa **Save** y espera a que GitHub complete el despliegue de Pages.
 
-La dirección prevista es `https://dabot11.github.io/-EL-SECRETO-DE-LA-SELVA-/`. Esa dirección solo estará disponible después de habilitar Pages y terminar correctamente el despliegue. Los siguientes cambios publicados en `main` actualizarán la página automáticamente.
+La dirección es `https://dabot11.github.io/-EL-SECRETO-DE-LA-SELVA-/`. Los cambios publicados en `main` actualizan la página automáticamente cuando termina el workflow **pages build and deployment** en Actions.
 
 ## Controles
 
@@ -60,19 +62,33 @@ Al cambiar de pestaña o salir de la ventana, la partida se pausa para evitar ca
 
 - Hay **una sola bandera**. Al tocarla, uno de los exploradores la lleva de forma visible. La interfaz identifica al portador.
 - Los arbustos son transitables y te ocultan automáticamente, incluso si llevas la bandera. Esconderse corta la visión del guardián.
-- Los dos guardianes de piedra y el espíritu patrullan, persiguen, buscan el último lugar donde te vieron y regresan a su patrulla. Las paredes bloquean su visión. Todos respetan muros y agua.
+- Los guardianes de piedra y los espíritus patrullan, persiguen, buscan el último lugar donde te vieron y regresan a su patrulla. Las paredes bloquean su visión. Todos respetan muros y agua.
 - Si un guardián te alcanza, quedas atrapado en una burbuja. **Una captura individual no consume un intento.** Tampoco hay liberación por tiempo.
 - Tu compañero rompe la burbuja al acercarse por un camino libre de obstáculos. El rescatado recibe **1.5 segundos de protección**.
 - Si atrapan al portador, la bandera cae en el suelo transitable de su posición. El compañero puede recuperarla al llegar y rescatarlo.
 - Solo si **ambos quedan atrapados**, se pierde exactamente un intento. Si quedan intentos, todos vuelven a su posición inicial y la bandera regresa al pedestal.
-- Tras tres capturas dobles aparece **¡MISIÓN FALLIDA!**. Reintentar empieza otra partida con tres intentos.
-- Se gana cuando la bandera está en manos de un explorador y **ambos están libres y cerca de la entrada**. Entonces aparece **¡MISIÓN COMPLETADA!** y la celebración.
+- Tras tres capturas dobles aparece **¡MISIÓN FALLIDA!**. Reintentar conserva la misión actual y el modo, y restaura los tres intentos.
+- Se completa cada misión cuando la bandera está en manos de un explorador y **ambos están libres y cerca de la entrada**. En las primeras cuatro aparece **¡MISIÓN COMPLETADA!** y el botón **Siguiente misión**, con tres intentos nuevos. La quinta termina con **¡AVENTURA COMPLETADA!**. Volver al menú o recargar inicia de nuevo la campaña; el progreso no se guarda entre sesiones.
 
-## El primer nivel
+## Cinco misiones
 
-Mapa de 18 × 14 casillas con proyección isométrica, siete grupos de arbustos, muros cubiertos de musgo, antorchas, un río y **dos puentes que permiten rutas alternativas**. El campamento de entrada está a la izquierda y el pedestal al otro lado del río. La cámara mantiene el nivel completo a la vista.
+| #   | Misión                    | Mapa y reto                                           | Guardianes |
+| --- | ------------------------- | ----------------------------------------------------- | ---------- |
+| 1   | El Templo Perdido         | Río central, dos puentes y escondites para aprender.  | 3          |
+| 2   | Los Puentes del Río       | Río transversal, nuevos cruces y rutas de patrulla.   | 3          |
+| 3   | El Jardín de las Estatuas | Senderos entre columnas, estanques y pasos estrechos. | 4          |
+| 4   | Las Ruinas de la Luna     | Canales ramificados, luz nocturna y dos espíritus.    | 5          |
+| 5   | El Santuario del Sol      | Dos ríos, cuatro cruces y seis guardianes.            | 6          |
 
-El juego usa resolución interna de 768 × 432, escalado nítido y orden de dibujo por profundidad. Los personajes tienen animaciones de caminar, reposo, ocultación, captura, rescate y celebración. Esta versión es silenciosa; el audio es opcional para una versión futura.
+Cada mapa tiene una distribución propia de muros, agua, puentes, arbustos y patrullas. En cada misión aumentan la velocidad de los guardianes, su alcance de visión y el tiempo que buscan tras perder el rastro. Los exploradores siguen siendo más rápidos y conservan las mismas reglas de rescate.
+
+La cámara muestra el mapa completo, de 18 × 14 casillas. Resolución interna de 960 × 600, sprites animados, texturas de piedra, agua animada, antorchas y colores por misión. Los muros llevan piedra tallada y musgo; los árboles se encuentran fuera del recinto. No hay palmeras sobre los muros.
+
+## Música y sonidos
+
+El sonido comienza al pulsar **Jugar**, respetando las reglas del navegador. Abre **♫ Música y sonido** para activar o desactivar música y efectos por separado y ajustar el volumen. Las preferencias se guardan localmente cuando el navegador lo permite. La música se silencia al pausar.
+
+La melodía y armonía originales se sintetizan en el navegador; el tempo y algunos tonos cambian con la misión. Hay efectos para comenzar, esconderse, alerta, captura, rescate, bandera, intento perdido y victoria. No se descargan grabaciones ni librerías de audio. Si Web Audio no está disponible, el juego sigue funcionando.
 
 ## Archivos principales
 
@@ -82,7 +98,7 @@ El juego usa resolución interna de 768 × 432, escalado nítido y orden de dibu
 | `src/main.js`                       | Inicialización y bucle `requestAnimationFrame` con delta time limitado.          |
 | `src/game.js`                       | Estados de partida, interacciones, bandera, rescates e intentos.                 |
 | `src/config.js`                     | Velocidades, radios, protección y enumeraciones de estados.                      |
-| `src/map.js`                        | Mapa lógico, posiciones iniciales, arbustos y patrullas.                         |
+| `src/map.js`, `src/missions.js`     | Cinco mapas, paletas, progresión de dificultad, posiciones y patrullas.          |
 | `src/collisions.js`                 | Colisión con volumen, subpasos, proyección y visión bloqueada por muros.         |
 | `src/navigation.js`                 | Búsqueda BFS y seguimiento de caminos con segmentos seguros.                     |
 | `src/ai.js`, `src/entities.js`      | Guardianes, compañero IA y creación de entidades.                                |
@@ -92,6 +108,9 @@ El juego usa resolución interna de 768 × 432, escalado nítido y orden de dibu
 | `tests/game.test.js`                | Pruebas de lógica y recorridos completos.                                        |
 | `tests/journey.js`                  | Simula entradas de movimiento para completar ambos modos con guardianes activos. |
 | `tests/browser_smoke.py`            | Controles, interfaces, interacciones y recorridos en Chromium.                   |
+| `src/audio.js` | Música, efectos, volumen y preferencias de sonido. |
+| `assets/adventure-*.png` | Portada y atlas de personajes generados para el estilo elegido. |
+| `tests/campaign.test.js` | Accesibilidad de los cinco mapas, progresión y campañas completas. |
 
 ## Pruebas
 
@@ -101,7 +120,7 @@ Desde la carpeta del proyecto:
 npm test
 ```
 
-La suite usa `node:test`, integrado en Node. Comprueba rutas alternativas, accesibilidad de todas las casillas transitables, colisiones, velocidad diagonal, controles simultáneos, detección, transiciones de IA, escondites, captura, rescate, protección, bandera, reinicio, derrota y victoria. Incluye dos partidas completas conducidas por entradas de movimiento, con los guardianes activos y sin teletransportar personajes.
+La suite usa `node:test`, integrado en Node. Comprueba rutas alternativas, accesibilidad de todas las casillas transitables, colisiones, velocidad diagonal, controles simultáneos, detección, transiciones de IA, escondites, captura, rescate, protección, bandera, reinicio, derrota y victoria. Incluye dos campañas completas de cinco misiones conducidas por entradas de movimiento, con los guardianes activos y sin teletransportar personajes.
 
 La prueba de navegador es opcional y necesita Python con Playwright y Chromium. No son dependencias del juego. Con el servidor encendido:
 
@@ -121,14 +140,8 @@ La prueba genera capturas y `test-results/browser-report.json` en un directorio 
 
 Consulta `VALIDATION.md` para conocer los resultados efectivamente ejecutados y sus límites.
 
-## Ideas opcionales para una versión 2
+## Arte y alcance
 
-El nivel y sus reglas ya están implementados. Estas mejoras **no forman parte de la versión actual**:
+La portada y el atlas pixelado se generaron para este proyecto a partir del estilo elegido por David y Tavito. La geometría del escenario, las partículas, las animaciones y la composición musical se implementan en el código. Los archivos de arte se incluyen en el repositorio y se sirven localmente.
 
-- Música ambiental y sonidos sintetizados, con control de volumen.
-- Más fotogramas de animación y variaciones visuales de ruinas y vegetación.
-- Soporte de mandos y reasignación de controles.
-- Ajustes de contraste y de tamaño de texto para accesibilidad.
-- Una ronda de pruebas con David y Tavito para ajustar la dificultad conservando las reglas.
-
-No hay multijugador por internet, combate, cuentas, compras ni servicios de guardado.
+Esta versión se juega con teclado en computadora. No incorpora controles táctiles, multijugador por internet, cuentas, compras ni guardado de campaña. La dificultad se puede ajustar después de probarla con David y Tavito.

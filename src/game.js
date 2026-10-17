@@ -6,6 +6,7 @@ import {
   GuardState,
 } from "./config.js";
 import { createMap, isBush, isWalkable } from "./map.js";
+import { MISSIONS } from "./missions.js";
 import { createPlayers, createGuards, createFlag } from "./entities.js";
 import {
   distance,
@@ -19,6 +20,7 @@ import { updateGuard, updateCompanion, canDetect } from "./ai.js";
 export class Game {
   constructor() {
     this.map = createMap();
+    this.missionIndex = 0;
     this.mode = 1;
     this.state = GameState.MENU;
     this.attempts = CONFIG.attempts;
@@ -43,21 +45,31 @@ export class Game {
     this.flag = createFlag(this.map);
     this.round++;
   }
-  start(mode = 1) {
+  start(mode = 1, missionIndex = 0) {
+    this.map = createMap(missionIndex);
+    this.missionIndex = missionIndex;
     this.mode = mode;
     this.attempts = CONFIG.attempts;
     this.events = [];
     this.resetLevel();
     this.time = 0;
     this.state = GameState.PLAYING;
-    this.notify(
-      mode === 1
-        ? "¡Adelante! Tu compañero explorará contigo."
-        : "¡La aventura se vive en equipo!",
-    );
+    this.notify(`Misión ${missionIndex + 1}: ${this.map.mission.briefing}`);
+    this.messageTimer = 6;
+    this.emit("start");
+  }
+  nextMission() {
+    if (this.state !== GameState.MISSION_COMPLETE) return false;
+    this.start(this.mode, this.missionIndex + 1);
+    return true;
+  }
+  retryMission() {
+    this.start(this.mode, this.missionIndex);
   }
   menu() {
     this.state = GameState.MENU;
+    this.missionIndex = 0;
+    this.map = createMap();
     this.attempts = CONFIG.attempts;
     this.resetLevel();
     this.events = [];
@@ -178,7 +190,10 @@ export class Game {
           distance(p, this.map.base) <= CONFIG.baseRadius,
       )
     ) {
-      this.state = GameState.VICTORY;
+      this.state =
+        this.missionIndex === MISSIONS.length - 1
+          ? GameState.VICTORY
+          : GameState.MISSION_COMPLETE;
       this.emit("victory", this.map.base);
     }
   }
@@ -194,6 +209,7 @@ export class Game {
       this.state === GameState.PAUSED ||
       this.state === GameState.MENU ||
       this.state === GameState.VICTORY ||
+      this.state === GameState.MISSION_COMPLETE ||
       this.state === GameState.GAME_OVER
     )
       return;
