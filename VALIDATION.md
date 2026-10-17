@@ -1,11 +1,11 @@
-# Verificación · versión 5
+# Verificación · versión 5.1
 
 Node.js 24.19.0, Python 3.12.14 y Chromium 154.0.8037.57 en Linux.
 
 | Comprobación        | Resultado                                                                                                                                                                                                             |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm test`          | 88 pruebas de reglas, regresión, guardado y recorridos                                                                                                                                                                |
-| Prueba de navegador | 109 comprobaciones con Chromium                                                                                                                                                                                       |
+| Prueba de navegador | 140 comprobaciones con Chromium                                                                                                                                                                                       |
 | Campaña             | Cinco misiones × dos modalidades × con/sin tres tesoros: veinte escenarios terminados                                                                                                                                 |
 | Solo                | Un personaje, tres corazones, protección entre golpes, curación interrumpible, alarma que impide curarse, derrota y reintento                                                                                         |
 | Dúo                 | Roles, combo, pases en ambos sentidos, recarga, paredes, distancia, receptor capturado, caída y rescate                                                                                                               |
@@ -19,7 +19,7 @@ Node.js 24.19.0, Python 3.12.14 y Chromium 154.0.8037.57 en Linux.
 | Progreso            | Migración v3/v4 conserva desbloqueos y copia anterior; nuevos récords separados; continuar y rejugar por modalidad                                                                                                    |
 | Audio               | Señal mediante AnalyserNode, pausa, silencio, efectos independientes, volumen y liberación de voces                                                                                                                   |
 | Recursos            | Sin errores JavaScript ni archivos faltantes; recursos del juego locales                                                                                                                                              |
-| Diseño              | Sin desbordamiento a 1366, 1024 y 390 px; escena completa en pantallas de portátil                                                                                                                                    |
+| Diseño              | Vista de juego completa a 1366×768, 1440×900, 1280×720, 1024×768 y 1280×600; menú móvil a 390 px; Retina a escala 2                                                                                                   |
 
 ## Cómo reproducir
 
@@ -44,7 +44,9 @@ Las capturas y el informe JSON se generan en `test-results/`, ignorado por Git. 
 - Liana que detenía la burbuja un cuadro antes de llegar al alcance de rescate.
 - Se adaptaron posiciones y expectativas de las pruebas anteriores a los mapas ampliados y al movimiento discreto.
 - Se conservaron las comprobaciones de roles, progreso, herramientas, rescates, derrota y victoria; se añadieron pruebas específicas de cuadrícula y teclado.
-- El HUD se comprueba fuera de las casillas transitables superiores en pantallas de portátil.
+- El mapa se amplía uniformemente al máximo disponible y el HUD queda en un panel lateral fuera del terreno.
+- Entrar/salir de pantalla completa, redimensionar en pausa y volver al menú conservan el estado correcto.
+- El menú inicial ya no corta sus botones en ventanas de 600 px de altura.
 
 ## Límites
 

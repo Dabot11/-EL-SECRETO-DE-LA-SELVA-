@@ -2,13 +2,17 @@
 
 Una aventura de **David y Tavito**, para uno o dos jugadores en la misma computadora.
 
-**Versión 5:** cámara desde arriba, suelo rectangular y movimiento de cuatro direcciones, casilla por casilla. Los cinco mapas pasan de 18 × 14 a **28 × 20 casillas**: 560 cuadros, más del doble que antes. Se mantienen un explorador con dos herramientas en solitario y las habilidades complementarias del dúo.
+**Versión 5.1:** cámara desde arriba, suelo rectangular y movimiento de cuatro direcciones, casilla por casilla. Los cinco mapas pasan de 18 × 14 a **28 × 20 casillas**: 560 cuadros, más del doble que antes. Se mantienen un explorador con dos herramientas en solitario y las habilidades complementarias del dúo.
 
 Los enemigos, sus patrullas y sus embestidas también avanzan por casillas. Los avisos muestran los cuadros que puede golpear cada ataque. La cámara mantiene el mapa completo visible para ambos jugadores.
 
 [Jugar en GitHub Pages](https://dabot11.github.io/-EL-SECRETO-DE-LA-SELVA-/)
 
 HTML, CSS y JavaScript sobre Canvas 2D, con pixel art de aventura y música sintetizada mediante Web Audio. El juego no necesita cuentas ni dependencias externas. Requiere teclado de computadora.
+
+## Pantalla de juego
+
+Al iniciar una partida en laptop, el tablero ocupa toda la ventana y se ajusta al mayor tamaño posible sin cortar el mapa ni deformar las casillas. Los objetivos, vidas, sonido y controles quedan en un panel lateral compacto. El botón **Pantalla completa** oculta también las barras del navegador cuando está disponible. Pausar y avanzar de misión conservan la vista ampliada; **Menú principal** recupera la página y sale de pantalla completa.
 
 ## Ejecutar
 

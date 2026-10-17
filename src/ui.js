@@ -51,6 +51,25 @@ export class UI {
     $("how-to").onclick = () => this.showHow();
     $("close-how").onclick = () => this.closeHow();
     $("pause").onclick = () => this.pause();
+    $("fullscreen").hidden = !document.fullscreenEnabled;
+    $("fullscreen").onclick = async () => {
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await document.documentElement.requestFullscreen();
+      } catch {
+        game.notify(
+          "El navegador no pudo abrir la pantalla completa. Puedes seguir jugando en toda la ventana.",
+        );
+      }
+      $("game-canvas").focus({ preventScroll: true });
+    };
+    document.addEventListener("fullscreenchange", () => {
+      const active = !!document.fullscreenElement;
+      $("fullscreen").setAttribute("aria-pressed", String(active));
+      $("fullscreen-label").textContent = active
+        ? "Salir de pantalla completa"
+        : "Pantalla completa";
+    });
     $("state-primary").onclick = () => {
       if (game.state === GameState.PAUSED) this.pause();
       else if (game.state === GameState.MISSION_COMPLETE) {
@@ -145,6 +164,16 @@ export class UI {
       state = g.state;
     $("menu").hidden = state !== GameState.MENU;
     const menu = state === GameState.MENU;
+    if (this.inGame !== !menu) {
+      if (!menu) this.menuScroll = window.scrollY;
+      document.body.classList.toggle("playing", !menu);
+      if (menu && this.inGame) {
+        window.scrollTo(0, this.menuScroll ?? 0);
+        if (document.fullscreenElement)
+          document.exitFullscreen().catch(() => {});
+      }
+      this.inGame = !menu;
+    }
     $("chapter-name").textContent = menu
       ? "01—05 · CINCO MISIONES, UN GRAN SECRETO"
       : `0${g.missionIndex + 1} / 05 · ${g.map.mission.name.toUpperCase()}`;

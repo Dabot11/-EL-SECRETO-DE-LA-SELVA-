@@ -28,6 +28,15 @@ export class Renderer {
     canvas.width = CONFIG.width;
     canvas.height = CONFIG.height;
     this.ctx.imageSmoothingEnabled = false;
+    this.wideScreen = window.matchMedia("(min-width: 701px)");
+    this.viewportSize = {
+      width: canvas.clientWidth,
+      height: canvas.clientHeight,
+    };
+    this.resizeObserver = new ResizeObserver(([entry]) => {
+      this.viewportSize = entry.contentRect;
+    });
+    this.resizeObserver.observe(canvas);
     this.time = 0;
     this.particles = [];
     this.palette = THEMES.jungle;
@@ -501,8 +510,42 @@ export class Renderer {
   draw(game, dt = 1 / 60) {
     this.time += dt;
     const c = this.ctx;
+    const expanded = game.state !== GameState.MENU && this.wideScreen.matches;
+    const width = expanded
+      ? Math.max(1, this.viewportSize.width)
+      : CONFIG.width;
+    const height = expanded
+      ? Math.max(1, this.viewportSize.height)
+      : CONFIG.height;
+    const density = expanded ? Math.min(window.devicePixelRatio || 1, 2) : 1;
+    if (this.canvas.width !== Math.round(width * density))
+      this.canvas.width = Math.round(width * density);
+    if (this.canvas.height !== Math.round(height * density))
+      this.canvas.height = Math.round(height * density);
+    c.setTransform(density, 0, 0, density, 0, 0);
     c.imageSmoothingEnabled = false;
     this.palette = THEMES[game.map.theme];
+    c.fillStyle = this.palette.bg;
+    c.fillRect(0, 0, width, height);
+    c.save();
+    const scale = expanded
+      ? Math.min(
+          (width - 24) / (game.map.width * S),
+          (height - 24) / (game.map.height * S),
+        )
+      : 1;
+    this.view = {
+      scale,
+      x: expanded ? (width - game.map.width * S * scale) / 2 : CONFIG.originX,
+      y: expanded ? (height - game.map.height * S * scale) / 2 : CONFIG.originY,
+    };
+    if (expanded) {
+      c.translate(
+        this.view.x - CONFIG.originX * scale,
+        this.view.y - CONFIG.originY * scale,
+      );
+      c.scale(scale, scale);
+    }
     if (game.state === GameState.MENU && this.keyArtReady) {
       c.drawImage(
         this.keyArt,
@@ -617,13 +660,14 @@ export class Renderer {
           game.players[0].campProgress / 2,
           "#ffb19d",
         );
-      this.text(
-        "28 × 20 · CUATRO DIRECCIONES",
-        CONFIG.width / 2,
-        CONFIG.originY + game.map.height * S + 15,
-        "#9bba9b",
-        8,
-      );
+      if (!expanded)
+        this.text(
+          "28 × 20 · CUATRO DIRECCIONES",
+          CONFIG.width / 2,
+          CONFIG.originY + game.map.height * S + 15,
+          "#9bba9b",
+          8,
+        );
     }
     for (const p of this.particles) {
       p.life -= dt;
@@ -635,5 +679,6 @@ export class Renderer {
     }
     c.globalAlpha = 1;
     this.particles = this.particles.filter((p) => p.life > 0);
+    c.restore();
   }
 }

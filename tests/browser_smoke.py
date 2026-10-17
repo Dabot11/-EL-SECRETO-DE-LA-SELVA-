@@ -112,7 +112,7 @@ with sync_playwright() as playwright:
     page.keyboard.up('d')
     page.wait_for_timeout(350)
     check("Dos teclas sostenidas dan prioridad a la última dirección",page.evaluate("app.game.players[0].x>=10.5 && app.game.players[0].y===5.5"))
-    check("El tablero tiene 28 columnas y 20 filas",page.evaluate("app.game.map.width===28&&app.game.map.height===20&&app.renderer.canvas.width===960&&app.renderer.canvas.height===720"))
+    check("El tablero tiene 28 columnas y 20 filas",page.evaluate("app.game.map.width===28&&app.game.map.height===20"))
 
     # Deterministic interaction fixtures exercise the rendered game and HUD.
     page.evaluate("""() => {
@@ -300,19 +300,57 @@ with sync_playwright() as playwright:
     check("Preferencias de sonido conservadas al recargar", not page.locator("#music-toggle").is_checked() and page.locator("#effects-toggle").is_checked() and page.locator("#volume").input_value()=="31")
     check("No hay reproducción automática antes de un gesto", page.evaluate("app.audio.context===null"))
     check("Volver al menú principal", page.locator("#menu").is_visible())
-    for width,height in [(1366,768),(1024,768),(390,844)]:
+    for width,height in [(1366,768),(1440,900),(1280,720),(1024,768),(1280,600),(390,844)]:
         page.set_viewport_size({"width":width,"height":height})
         page.screenshot(path=str(OUTPUT / f"menu-{width}.png"), full_page=True)
         check(f"Diseño sin desbordamiento horizontal a {width}px",page.evaluate("document.documentElement.scrollWidth <= innerWidth"))
         check(f"Botones del menú dentro de la escena a {width}px",page.locator('#how-to').evaluate("e=>e.getBoundingClientRect().bottom <= document.querySelector('.game-shell').getBoundingClientRect().bottom"))
         if width>700:
-            check(f"Todo el juego cabe en pantalla a {width}×{height}",page.locator(".game-shell").evaluate("e=>e.getBoundingClientRect().bottom<=innerHeight"))
             page.locator('#play-duo').click()
             page.wait_for_timeout(160)
-            page.screenshot(path=str(OUTPUT / f"grid-game-{width}.png"),full_page=True)
-            check(f"Los indicadores quedan encima de los cuadros transitables a {width}px",page.locator('.hud-top').evaluate("e=>e.getBoundingClientRect().bottom <= document.querySelector('#game-canvas').getBoundingClientRect().top + document.querySelector('#game-canvas').getBoundingClientRect().height * 116 / 720"))
+            page.screenshot(path=str(OUTPUT / f"expanded-game-{width}-{height}.png"))
+            check(f"El juego ocupa toda la ventana a {width}×{height}",page.locator('.game-shell').evaluate("e=>{const r=e.getBoundingClientRect();return r.x===0&&r.y===0&&r.width===innerWidth&&r.height===innerHeight}"))
+            check(f"Mapa completo, cuadrado y ampliado al máximo a {width}×{height}",page.evaluate("""() => {
+              const {view,canvas}=app.renderer, r=canvas.getBoundingClientRect();
+              const w=app.game.map.width*28*view.scale,h=app.game.map.height*28*view.scale;
+              return view.x>=0&&view.y>=0&&view.x+w<=r.width&&view.y+h<=r.height
+                && Math.min(r.width-w,r.height-h)<25 && w*h/(r.width*r.height)>.65;
+            }"""))
+            check(f"Controles y mensajes caben fuera del mapa a {width}×{height}",page.evaluate("""() => {
+              const canvas=document.querySelector('#game-canvas').getBoundingClientRect();
+              return ['.mission','.team-attempts','#toast','.players-info','#pause','#fullscreen'].every(selector=>{
+                const e=document.querySelector(selector);if(e.hidden)return true;const r=e.getBoundingClientRect();
+                return r.left>=canvas.right&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;
+              })&&document.documentElement.scrollHeight<=innerHeight;
+            }"""))
+            if (width,height)==(1366,768):
+                page.locator('#fullscreen').click()
+                page.wait_for_function("!!document.fullscreenElement && document.querySelector('#fullscreen').getAttribute('aria-pressed')==='true'")
+                check("Pantalla completa se activa con el botón",page.locator('#fullscreen').get_attribute('aria-pressed')=='true')
+                page.locator('#fullscreen').click()
+                page.wait_for_function("!document.fullscreenElement && document.querySelector('#fullscreen').getAttribute('aria-pressed')==='false'")
+                check("Salir de pantalla completa conserva la partida ampliada",page.evaluate("document.body.classList.contains('playing')&&app.game.state==='PLAYING'"))
             page.keyboard.press('Escape')
+            frozen=page.evaluate("JSON.stringify(app.game.players)")
+            page.set_viewport_size({'width':width-30,'height':height-20})
+            page.wait_for_timeout(100)
+            check(f"Redimensionar en pausa conserva la partida a {width}px",page.evaluate("JSON.stringify(app.game.players)")==frozen)
             page.locator('#state-menu').click()
+            check(f"Volver al menú recupera la página a {width}px",page.locator('.site-header').is_visible() and page.locator('#mission-route').is_visible() and not page.evaluate("document.body.classList.contains('playing')"))
+
+    retina=browser.new_page(viewport={'width':1440,'height':900},device_scale_factor=2)
+    retina.goto(BASE,wait_until='networkidle')
+    retina.locator('#play-solo').click()
+    retina.wait_for_timeout(160)
+    check("Canvas nítido y vista ampliada en pantalla Retina",retina.locator('#game-canvas').evaluate("e=>e.width===e.clientWidth*2&&e.height===e.clientHeight*2&&document.body.classList.contains('playing')"))
+    retina.screenshot(path=str(OUTPUT/'expanded-retina-solo.png'))
+    retina.locator('#fullscreen').click()
+    retina.wait_for_function("!!document.fullscreenElement")
+    retina.locator('#pause').click()
+    retina.locator('#state-menu').click()
+    retina.wait_for_function("!document.fullscreenElement")
+    check("Volver al menú sale también de pantalla completa",retina.locator('#menu').is_visible() and not retina.evaluate("document.body.classList.contains('playing')"))
+    retina.close()
 
     migration = browser.new_page()
     migration.goto(BASE,wait_until='networkidle')

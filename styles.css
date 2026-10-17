@@ -1,4 +1,5 @@
 :root {
+  --play-panel-width: 212px;
   color-scheme: dark;
   --ink: #102922;
   --panel: #15392e;
@@ -11,6 +12,195 @@
   --red: #e7a18a;
   font-family: Arial, Helvetica, sans-serif;
   font-synthesis: none;
+}
+
+/* During a laptop game the board owns the window; information stays beside it. */
+@media (min-width: 701px) {
+  body.playing {
+    overflow: hidden;
+  }
+  body.playing .site-header,
+  body.playing footer,
+  body.playing main > :not(.game-shell):not(.audio-settings) {
+    display: none;
+  }
+  body.playing .game-shell {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 0;
+    z-index: 10;
+  }
+  body.playing .game-shell::after {
+    display: none;
+  }
+  body.playing #game-canvas {
+    width: calc(100% - var(--play-panel-width));
+    height: 100%;
+  }
+  body.playing .hud {
+    left: auto;
+    width: var(--play-panel-width);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 58px 12px 12px;
+    background: #102b25;
+    border-left: 1px solid var(--border);
+  }
+  body.playing .hud-top,
+  body.playing .hud-bottom {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  body.playing .hud-top {
+    order: 1;
+  }
+  body.playing .mission {
+    min-width: 0;
+    width: 100%;
+    padding: 12px;
+  }
+  body.playing .mission strong {
+    font-size: 16px;
+    line-height: 1.25;
+    margin: 8px 0;
+  }
+  body.playing .mission > span {
+    display: block;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  body.playing .mission-counters {
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 9px;
+    margin-top: 12px;
+  }
+  body.playing .hud-top small {
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+  body.playing .toast {
+    position: static;
+    order: 2;
+    width: 100%;
+    max-width: none;
+    transform: none;
+    padding: 10px;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  body.playing .hud-bottom {
+    order: 3;
+    margin-top: auto;
+  }
+  body.playing .players-info {
+    flex-direction: column;
+    gap: 12px;
+  }
+  body.playing .player-info {
+    padding: 8px 0;
+    gap: 7px;
+  }
+  body.playing .player-info > span {
+    min-width: 0;
+  }
+  body.playing .player-info strong {
+    font-size: 10px;
+    letter-spacing: 0.5px;
+  }
+  body.playing .player-info small,
+  body.playing #dash-one,
+  body.playing #dash-two {
+    font-size: 9px;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+  body.playing .utility-button {
+    min-height: 34px;
+    justify-content: center;
+  }
+  body.playing .utility-button span {
+    font-size: 10px;
+    letter-spacing: 0.3px;
+  }
+  body.playing .audio-settings {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    width: calc(var(--play-panel-width) - 24px);
+    margin: 0;
+    z-index: 20;
+  }
+  body.playing .audio-settings summary {
+    width: 100%;
+  }
+  body.playing .audio-controls {
+    position: absolute;
+    right: 0;
+    width: 320px;
+    max-width: calc(100vw - 24px);
+  }
+}
+
+@media (min-width: 701px) and (max-height: 720px) {
+  .game-shell .menu-copy {
+    top: 6%;
+    width: 50%;
+  }
+  .game-shell .menu-copy h1 {
+    font-size: 28px;
+    margin: 12px 0;
+    letter-spacing: -1px;
+  }
+  .game-shell .menu-copy > p {
+    font-size: 10px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .game-shell .menu-buttons {
+    width: 100%;
+    min-width: 0;
+    max-width: 230px;
+    gap: 6px;
+  }
+  .game-shell .menu-buttons .button {
+    padding: 8px 12px;
+    min-height: 42px;
+  }
+  .game-shell .menu-copy > .text-button {
+    margin-top: 8px;
+    font-size: 10px;
+  }
+  body.playing .hud,
+  body.playing .hud-top,
+  body.playing .hud-bottom,
+  body.playing .players-info {
+    gap: 6px;
+  }
+  body.playing .mission {
+    padding: 8px;
+  }
+  body.playing .mission strong {
+    font-size: 14px;
+  }
+  body.playing .toast {
+    font-size: 10px;
+    line-height: 1.3;
+    padding: 6px;
+  }
+  body.playing .player-info {
+    padding: 4px 0;
+  }
 }
 * {
   box-sizing: border-box;
@@ -1084,6 +1274,9 @@ kbd {
   }
 }
 @media (max-width: 700px) {
+  #fullscreen {
+    display: none;
+  }
   .audio-settings {
     margin-top: 14px;
   }
