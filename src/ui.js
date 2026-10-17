@@ -1,6 +1,7 @@
-import { GameState, PlayerState, FlagState } from "./config.js";
+import { CONFIG, GameState, PlayerState, FlagState } from "./config.js";
 import { formatTime } from "./progress.js";
-import { MISSIONS } from "./missions.js";
+import { MISSIONS, THEMES } from "./missions.js";
+import { createMap, TILE } from "./map.js";
 import { paintPortrait, drawSprite } from "./sprites.js";
 const $ = (id) => document.getElementById(id);
 export class UI {
@@ -11,6 +12,8 @@ export class UI {
     this.previousState = null;
     this.howOpen = false;
     this.lastToast = "";
+    this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    this.previewImages = MISSIONS.map((_, i) => this.mapPreview(i));
     this.paintPortraits();
     this.routeMode = 1;
     this.routeKey = "";
@@ -122,6 +125,165 @@ export class UI {
       });
     }
   }
+  mapPreview(index) {
+    const map = createMap(index),
+      palette = THEMES[map.theme];
+    const canvas = document.createElement("canvas");
+    canvas.width = map.width * 4;
+    canvas.height = map.height * 4;
+    const c = canvas.getContext("2d");
+    for (let y = 0; y < map.height; y++)
+      for (let x = 0; x < map.width; x++) {
+        const tile = map.cells[y][x];
+        c.fillStyle =
+          tile === TILE.WALL
+            ? palette.stone
+            : tile === TILE.WATER
+              ? palette.water
+              : tile === TILE.BRIDGE
+                ? "#d4ac6b"
+                : tile === TILE.BUSH
+                  ? palette.bush
+                  : palette.shadow;
+        c.fillRect(
+          x * 4,
+          y * 4,
+          tile === TILE.WALL ? 3 : 4,
+          tile === TILE.WALL ? 3 : 4,
+        );
+      }
+    for (const [point, color] of [
+      [map.base, "#b5ffe3"],
+      [map.pedestal, "#ffe29e"],
+    ]) {
+      c.fillStyle = color;
+      c.fillRect(point.x * 4 - 2, point.y * 4 - 2, 4, 4);
+    }
+    return canvas.toDataURL();
+  }
+  setupAbilities(solo) {
+    if (this.abilityMode === solo) return;
+    this.abilityMode = solo;
+    this.abilities = [];
+    const add = (parent, id, key, name, cooldown, maximum, player) => {
+      const node = document.createElement("div");
+      node.className = "ability";
+      node.setAttribute("role", "group");
+      node.id = id;
+      node.innerHTML = `<kbd>${key}</kbd><span>${name}</span><b>LISTA</b><i aria-hidden="true"></i>`;
+      parent.append(node);
+      this.abilities.push({
+        node,
+        label: node.querySelector("b"),
+        name,
+        cooldown,
+        maximum,
+        player,
+      });
+    };
+    for (const suffix of ["one", "two"]) {
+      $(`tools-${suffix}`).replaceChildren();
+      $(`dash-${suffix}`).replaceChildren();
+    }
+    add(
+      $("tools-one"),
+      "ability-light",
+      "E",
+      "Luz",
+      "lightCooldown",
+      CONFIG.lightCooldown,
+      0,
+    );
+    if (solo)
+      add(
+        $("tools-one"),
+        "ability-vine",
+        "Q",
+        "Liana",
+        "vineCooldown",
+        CONFIG.vineCooldown,
+        0,
+      );
+    else {
+      add(
+        $("tools-two"),
+        "ability-vine",
+        "ENTER",
+        "Liana",
+        "vineCooldown",
+        CONFIG.vineCooldown,
+        1,
+      );
+      add(
+        $("tools-one"),
+        "ability-pass-one",
+        "F",
+        "Pase",
+        "passCooldown",
+        0.8,
+        0,
+      );
+      add(
+        $("tools-two"),
+        "ability-pass-two",
+        "L",
+        "Pase",
+        "passCooldown",
+        0.8,
+        1,
+      );
+    }
+    add(
+      $("dash-one"),
+      "ability-dash-one",
+      "ESPACIO",
+      "Impulso",
+      "dashCooldown",
+      CONFIG.dashCooldown,
+      0,
+    );
+    if (!solo)
+      add(
+        $("dash-two"),
+        "ability-dash-two",
+        "SHIFT DER.",
+        "Impulso",
+        "dashCooldown",
+        CONFIG.dashCooldown,
+        1,
+      );
+  }
+  updateAbilities(game) {
+    for (const a of this.abilities) {
+      const p = game.players[a.player];
+      const pass = a.cooldown === "passCooldown";
+      const value = pass ? game.flag.passCooldown : p[a.cooldown];
+      const unavailable =
+        p.state === PlayerState.CAPTURED ||
+        (pass && game.flag.carrier !== p.id);
+      const status = unavailable
+        ? "—"
+        : value > 0
+          ? `${value.toFixed(1)}s`
+          : "LISTO";
+      if (a.status !== status) {
+        a.status = status;
+        a.label.textContent = status;
+        a.node.classList.toggle("unavailable", unavailable);
+        a.node.classList.toggle("recharging", !unavailable && value > 0);
+        a.node.setAttribute(
+          "aria-label",
+          `${a.name}: ${unavailable ? "no disponible" : value > 0 ? `RECARGA ${status}` : "lista"}`,
+        );
+        // Keep the keyboard hint and countdown legible without announcing every frame.
+        a.node.title = a.node.getAttribute("aria-label");
+      }
+      a.node.style.setProperty(
+        "--ready",
+        unavailable ? 0 : Math.max(0, 1 - value / a.maximum),
+      );
+    }
+  }
   async unlockAudio() {
     const available = await this.audio.unlock();
     $("audio-status").textContent = available
@@ -200,7 +362,7 @@ export class UI {
         const record = g.progress.record(this.routeMode, i),
           unlocked = g.progress.unlocked(this.routeMode, i),
           current = !menu && i === g.missionIndex;
-        return `<li class="${record ? "completed " : ""}${current ? "current" : ""}" ${current ? 'aria-current="step"' : ""}><button data-mission="${i}" ${!menu || !unlocked ? "disabled" : ""} aria-label="${unlocked ? "Jugar" : "Bloqueada"}: ${mission.name}"><span class="route-number">${String(i + 1).padStart(2, "0")}</span><strong>${mission.name}</strong><small>${mission.subtitle}</small><span class="difficulty" aria-label="Dificultad ${mission.difficulty} de ${MISSIONS.length}">${"◆".repeat(mission.difficulty)}<span>${"◇".repeat(MISSIONS.length - mission.difficulty)}</span></span><small class="route-record">${record ? `${"★".repeat(record.stars)}${"☆".repeat(3 - record.stars)} · ${formatTime(record.time)} · ${record.score} pts` : unlocked ? "LISTA PARA EXPLORAR" : "Completa la misión anterior"}</small></button></li>`;
+        return `<li class="${record ? "completed " : ""}${unlocked ? "unlocked " : "locked "}${current ? "current" : ""}" style="--region-color:${THEMES[mission.theme].accent}" ${current ? 'aria-current="step"' : ""}><button data-mission="${i}" ${!menu || !unlocked ? "disabled" : ""} aria-label="${unlocked ? "Jugar" : "Bloqueada"}: ${mission.name}"><div class="route-preview"><img src="${this.previewImages[i]}" alt="" /><span class="route-number">${String(i + 1).padStart(2, "0")}</span><span class="route-badge">${record ? "EXPLORADA" : unlocked ? "DISPONIBLE" : "POR DESCUBRIR"}</span></div><div class="route-copy"><strong>${mission.name}</strong><small>${mission.subtitle}</small><span class="difficulty" aria-label="Dificultad ${mission.difficulty} de ${MISSIONS.length}">${"◆".repeat(mission.difficulty)}<span>${"◇".repeat(MISSIONS.length - mission.difficulty)}</span></span><small class="route-record">${record ? `${"★".repeat(record.stars)}${"☆".repeat(3 - record.stars)} · ${formatTime(record.time)} · ${record.score} pts` : unlocked ? "EMPEZAR EXPEDICIÓN →" : "Completa la misión anterior"}</small></div></button></li>`;
       }).join("");
     }
     $("hud").hidden = state === GameState.MENU;
@@ -210,6 +372,16 @@ export class UI {
     const solo = g.mode === 1,
       carrying = g.flag.state === FlagState.CARRIED,
       bridge = g.bridge;
+    $("hud-mission-name").textContent = g.map.mission.name;
+    const stage = carrying ? 2 : g.sealOpen() ? 1 : 0;
+    ["step-seal", "step-relic", "step-home"].forEach((id, i) => {
+      $(id).classList.toggle("complete", i < stage);
+      $(id).classList.toggle("active", i === stage);
+      if (i === stage) $(id).setAttribute("aria-current", "step");
+      else $(id).removeAttribute("aria-current");
+    });
+    this.setupAbilities(solo);
+    this.updateAbilities(g);
     const bridgeStep =
       bridge && !bridge.open
         ? !bridge.charged
@@ -261,9 +433,7 @@ export class UI {
     $("hud").classList.toggle("alarm", g.alarm);
     $("hud").classList.toggle("solo", solo);
     $("player-two-panel").hidden = solo;
-    $("player-one-role").textContent = solo
-      ? "EXPLORADOR · DOS HERRAMIENTAS"
-      : "AZUL · LINTERNA";
+    $("player-one-role").textContent = solo ? "EXPLORADOR" : "AZUL · LINTERNA";
     $("lives-label").textContent = solo ? "CORAZONES" : "INTENTOS COMPARTIDOS";
     const lives = solo ? g.players[0].hearts : g.attempts;
     $("attempts").setAttribute(
@@ -273,13 +443,12 @@ export class UI {
     [...$("attempts").children].forEach((crystal, i) =>
       crystal.classList.toggle("spent", i >= lives),
     );
-    const cooldown = (value) => (value > 0 ? `${value.toFixed(1)}s` : "LISTA");
     for (const p of g.players) {
       const first = p.id === 0,
         captured = p.state === PlayerState.CAPTURED;
       $(first ? "player-one-status" : "player-two-status").textContent =
         captured
-          ? "¡ATRAPADO! · RUEDA HACIA TU COMPAÑERO"
+          ? "¡ATRAPADO! · RUEDA Y ACÉRCATE"
           : p.campProgress > 0
             ? `CURANDO · ${Math.ceil(2 - p.campProgress)}s`
             : p.state === PlayerState.HIDDEN
@@ -289,15 +458,10 @@ export class UI {
                 : first
                   ? "W A S D"
                   : "↑ ← ↓ →";
-      $(first ? "dash-one" : "dash-two").textContent =
-        `${first ? "ESPACIO" : "SHIFT DER."} · ${captured ? "IMPULSO NO DISPONIBLE" : p.dashCooldown > 0 ? `RECARGA ${p.dashCooldown.toFixed(1)}s` : "IMPULSO LISTO"}`;
-      $(first ? "tools-one" : "tools-two").textContent = captured
-        ? "Acérquense y esperen para rescatar"
-        : solo
-          ? `E LUZ ${cooldown(p.lightCooldown)} · Q LIANA ${cooldown(p.vineCooldown)}`
-          : first
-            ? `E LUZ ${cooldown(p.lightCooldown)} · F PASE`
-            : `ENTER LIANA ${cooldown(p.vineCooldown)} · L PASE`;
+      $(first ? "player-one-panel" : "player-two-panel").classList.toggle(
+        "captured",
+        captured,
+      );
     }
     const toastVisible = g.messageTimer > 0 && state === GameState.PLAYING;
     $("toast").hidden = !toastVisible;
@@ -363,6 +527,7 @@ export class UI {
   }
   animate(time) {
     if ($("state-screen").hidden) return;
+    if (this.reducedMotion.matches) time = 0;
     const c = $("result-art").getContext("2d");
     c.clearRect(0, 0, 180, 80);
     c.imageSmoothingEnabled = false;

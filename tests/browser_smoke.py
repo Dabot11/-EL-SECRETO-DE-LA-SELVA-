@@ -60,8 +60,10 @@ with sync_playwright() as playwright:
     page.keyboard.press("Escape")
     check("Pausa con Escape", page.evaluate("app.game.state === 'PAUSED'") and page.locator("#state-screen").is_visible())
     frozen = page.evaluate("JSON.stringify(app.game.players)")
+    frozen_canvas = page.locator("#game-canvas").evaluate("e=>e.toDataURL()")
     page.wait_for_timeout(120)
     check("La pausa detiene el movimiento", page.evaluate("JSON.stringify(app.game.players)") == frozen)
+    check("La pausa congela también agua, vegetación y efectos", page.locator("#game-canvas").evaluate("e=>e.toDataURL()") == frozen_canvas)
     page.locator("#state-primary").click()
     check("Continuar reanuda el juego", page.evaluate("app.game.state === 'PLAYING'"))
     page.locator('#pause').focus()
@@ -85,7 +87,7 @@ with sync_playwright() as playwright:
     page.wait_for_timeout(360)
     page.keyboard.up('ArrowRight')
     check("Impulso rojo independiente con Shift derecho",page.evaluate("app.game.stats.dashes===2 && app.game.players[1].dashCooldown>0"))
-    check("HUD muestra runas, tesoros y recarga", 'PASO 1/3' in page.locator('#rune-count').inner_text() and 'TESOROS' in page.locator('#relic-count').inner_text() and 'RECARGA' in page.locator('#dash-two').inner_text())
+    check("HUD muestra runas, tesoros y recarga", 'PASO 1/3' in page.locator('#rune-count').inner_text() and 'TESOROS' in page.locator('#relic-count').inner_text() and 'RECARGA' in page.locator('#ability-dash-two').get_attribute('aria-label') and page.locator('#ability-dash-two.recharging').count()==1)
 
     page.evaluate("""() => {
       const g=app.game;g.start(2,1);g.guards=[];g.runes=[];g.relics=[];g.traps=[];
@@ -201,6 +203,7 @@ with sync_playwright() as playwright:
     page.locator('#state-primary').click()
 
     check("Arte pixelado cargado", page.evaluate("async()=> (await import('/src/sprites.js')).atlasReady && (await import('/src/sprites.js')).guardiansReady && app.renderer.keyArtReady"))
+    check("Cada destino tiene su propia vista previa", page.locator(".route-preview img").evaluate_all("nodes=>nodes.length===10&&new Set(nodes.map(n=>n.src)).size===10&&nodes.every(n=>n.complete&&n.naturalWidth>0)"))
     check("Diez destinos disponibles en la campaña", page.locator("#mission-route li").count() == 10)
     check("Solo la primera misión está disponible antes de avanzar",page.evaluate("app.game.progress.unlocked(1,0) && !app.game.progress.unlocked(1,1)"))
     journeys = []

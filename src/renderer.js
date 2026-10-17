@@ -10,12 +10,8 @@ import { ENEMIES, trapPhase } from "./challenges.js";
 import { THEMES } from "./missions.js";
 import { drawSprite, drawArt } from "./sprites.js";
 import { renderPosition, sameTile } from "./grid.js";
-import { distance } from "./collisions.js";
+import { paintTerrain, paintWater, paintAtmosphere } from "./terrain.js";
 const S = CONFIG.tileWidth;
-const hash = (x, y) => {
-  const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-  return n - Math.floor(n);
-};
 export const toScreen = (x, y) => ({
   x: CONFIG.originX + x * S,
   y: CONFIG.originY + y * S,
@@ -39,6 +35,9 @@ export class Renderer {
     this.resizeObserver.observe(canvas);
     this.time = 0;
     this.particles = [];
+    this.effects = [];
+    this.lastMotion = new WeakMap();
+    this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     this.palette = THEMES.jungle;
     this.keyArt = new Image();
     this.keyArt.src = new URL(
@@ -145,145 +144,75 @@ export class Renderer {
     this.rect(-7, -2, 14, 3, "#ebc56e");
     c.restore();
   }
-  wall(x, y, seed) {
-    const p = this.palette;
-    this.rect(x, y, S, S, p.shadow);
-    this.rect(x + 1, y + 1, S - 2, S - 7, p.stone);
-    this.rect(x + 2, y + 2, S - 4, 2, p.light);
-    this.rect(x + 2, y + S - 7, S - 3, 3, p.line);
-    this.line(
-      [
-        [x + 1, y + 11],
-        [x + S - 2, y + 11],
-      ],
-      p.shadow,
-    );
-    this.line(
-      [
-        [x + 9, y + 2],
-        [x + 9, y + 10],
-      ],
-      p.shadow,
-    );
-    this.line(
-      [
-        [x + 19, y + 12],
-        [x + 19, y + S - 7],
-      ],
-      p.shadow,
-    );
-    if (seed > 0.5) {
-      this.rect(x + 2, y + 3, 5, 3, "#617d48");
-      this.rect(x + 4, y + 5, 8, 2, "#738a4e");
-    }
-    this.rect(x + 4, y + 15, 2, 2, p.light);
-    this.rect(x + 22, y + 6, 2, 2, p.light);
-  }
   cacheFloor(map) {
-    const previous = this.ctx;
-    this.groundLayer = document.createElement("canvas");
+    if (!this.groundLayer) this.groundLayer = document.createElement("canvas");
     this.groundLayer.width = CONFIG.width;
     this.groundLayer.height = CONFIG.height;
+    const previous = this.ctx;
     this.ctx = this.groundLayer.getContext("2d");
-    this.ctx.imageSmoothingEnabled = false;
-    const p = this.palette;
-    this.rect(0, 0, CONFIG.width, CONFIG.height, p.bg);
-    // Dark foliage frames the map without covering its square walkable cells.
-    for (let i = 0; i < 140; i++) {
-      const horizontal = i < 80,
-        x = horizontal ? 54 + hash(i, 4) * 850 : i % 2 ? 60 : 900,
-        y = horizontal ? (i % 2 ? 68 : 661) : 90 + hash(i, 6) * 550;
-      this.rect(
-        x,
-        y,
-        9 + hash(i, 3) * 16,
-        5 + hash(i, 2) * 8,
-        ["#193f31", "#254a33", "#33583b"][i % 3],
-      );
-      this.rect(x + 4, y + 2, 6, 2, "#527747");
-    }
-    this.rect(
-      CONFIG.originX - 5,
-      CONFIG.originY - 5,
-      map.width * S + 10,
-      map.height * S + 10,
-      "#091f1b",
-    );
-    for (let y = 0; y < map.height; y++)
-      for (let x = 0; x < map.width; x++) {
-        const t = tileAt(map, x, y),
-          s = toScreen(x, y),
-          seed = hash(x, y);
-        if (t === TILE.WALL) {
-          this.wall(s.x, s.y, seed);
-          continue;
-        }
-        this.rect(
-          s.x,
-          s.y,
-          S,
-          S,
-          t === TILE.WATER ? p.water : p.ground[Math.floor(seed * 4)],
-        );
-        if (t === TILE.WATER) {
-          this.rect(s.x + 1, s.y + 1, S - 2, 1, p.waterLight + "60");
-          this.rect(s.x, s.y, S, 1, p.line);
-          continue;
-        }
-        // Equal square edges and small stone chips make the movement grid explicit.
-        this.rect(s.x, s.y, S, 1, p.line);
-        this.rect(s.x, s.y, 1, S, p.line);
-        this.rect(s.x + 2, s.y + 2, S - 4, 1, p.light + "b0");
-        this.rect(s.x + S - 2, s.y + 2, 1, S - 4, p.shadow + "80");
-        this.rect(s.x + 2, s.y + S - 2, S - 3, 1, p.shadow + "80");
-        for (let k = 0; k < 4; k++)
-          this.rect(
-            s.x + 4 + hash(x + k, y) * 19,
-            s.y + 4 + hash(x, y + k) * 19,
-            2,
-            1,
-            k % 2 ? p.line : p.light,
-          );
-        if (t === TILE.BRIDGE) {
-          this.rect(s.x + 1, s.y + 1, S - 2, S - 2, "#987349");
-          for (let k = 2; k < S; k += 6) {
-            this.rect(s.x + 2, s.y + k, S - 4, 4, "#c39b63");
-            this.rect(s.x + 3, s.y + k, 1, 2, "#eed2a0");
-          }
-          this.rect(s.x + 1, s.y + 1, 2, S - 2, "#e1bb80");
-          this.rect(s.x + S - 3, s.y + 1, 2, S - 2, "#e1bb80");
-        }
-        if (t === TILE.BASE) {
-          this.rect(s.x + 2, s.y + 2, S - 4, S - 4, "#375d4b30");
-          if (x % 2 === 0 && y % 2 === 0)
-            this.rect(s.x + 13, s.y + 13, 2, 2, "#a7d5aa");
-        }
-      }
-    const b = toScreen(map.base.x, map.base.y);
-    this.rect(b.x - 12, b.y - 12, 24, 24, "#244e40");
-    this.ctx.strokeStyle = "#b6d19b";
-    this.ctx.strokeRect(b.x - 11.5, b.y - 11.5, 23, 23);
-    this.rune(b.x, b.y, "#d6e4ad");
+    paintTerrain(this, map);
     this.ctx = previous;
     this.cachedMap = map;
     this.cachedRevision = map.revision;
   }
-  water(map) {
-    for (let y = 0; y < map.height; y++)
-      for (let x = 0; x < map.width; x++)
-        if (tileAt(map, x, y) === TILE.WATER) {
-          const s = toScreen(x, y);
-          for (let k = 0; k < 3; k++) {
-            const dx = 3 + ((hash(x + k, y) * 17 + this.time * 2) % 18);
-            this.rect(
-              s.x + dx,
-              s.y + 6 + k * 7,
-              5,
-              1,
-              this.palette.waterLight + "80",
-            );
-          }
-        }
+  glow(x, y, color, radius = 20, strength = 0.2) {
+    const c = this.ctx;
+    c.save();
+    c.globalAlpha *= strength;
+    const gradient = c.createRadialGradient(x, y, 1, x, y, radius);
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(1, color + "00");
+    c.fillStyle = gradient;
+    c.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+    c.restore();
+  }
+  actor(body, type, screen, options) {
+    const c = this.ctx,
+      reduced = this.reducedMotion.matches;
+    const step = body.motion
+      ? 1 - body.motion.remaining / body.motion.duration
+      : 0;
+    const stride = reduced ? 0 : Math.sin(step * Math.PI);
+    if (body.motion && this.lastMotion.get(body) !== body.motion) {
+      this.lastMotion.set(body, body.motion);
+      if (!reduced && type !== "spirit") {
+        const start = toScreen(body.motion.from.x, body.motion.from.y);
+        for (const side of [-1, 1])
+          this.particles.push({
+            x: start.x + side * 4,
+            y: start.y + 6,
+            vx: side * 5,
+            vy: -3,
+            life: 0.22,
+            duration: 0.22,
+            size: 1,
+            color: this.palette.light,
+          });
+      }
+    }
+    const windup = body.state === GuardState.WINDUP;
+    const anticipation =
+      windup && body.attack ? 1 - body.attackTimer / body.attack.duration : 0;
+    const float =
+      type === "spirit" && !reduced ? Math.sin(this.time * 3 + body.id) * 2 : 0;
+    const bob =
+      type === "spirit" ? float : stride * (type === "warden" ? 0.8 : 2);
+    const squish = reduced ? 0 : windup ? anticipation * 0.1 : stride * -0.035;
+    c.save();
+    c.translate(screen.x, screen.y + 9 - bob);
+    if (!reduced)
+      c.rotate(
+        body.state === GuardState.STUNNED
+          ? Math.sin(this.time * 6) * 0.045
+          : stride * 0.025 * (body.facing || 1),
+      );
+    c.scale(1 + squish, 1 - squish);
+    drawSprite(c, type, 0, 0, {
+      ...options,
+      facing: body.facing,
+      frame: !reduced && body.motion && step > 0.25 && step < 0.8 ? 1 : 0,
+    });
+    c.restore();
   }
   signals(game) {
     for (const trap of game.traps) {
@@ -316,6 +245,24 @@ export class Renderer {
               : 0.22 + 0.08 * Math.sin(this.time * 14),
           );
           const p = toScreen(cell.x, cell.y);
+          // Strong corner marks remain readable on foliage and every biome.
+          for (const dx of [-1, 1])
+            for (const dy of [-1, 1]) {
+              this.rect(
+                p.x + dx * 12 - (dx > 0 ? 4 : 0),
+                p.y + dy * 12,
+                5,
+                2,
+                color,
+              );
+              this.rect(
+                p.x + dx * 12,
+                p.y + dy * 12 - (dy > 0 ? 4 : 0),
+                2,
+                5,
+                color,
+              );
+            }
           this.text("×", p.x, p.y + 4, color, 13);
         }
       }
@@ -348,9 +295,20 @@ export class Renderer {
     const p = toScreen(item.x, item.y),
       c = isRune ? (item.active ? "#c5f5bb" : "#94e4db") : "#ffdc8f";
     this.shadow(p.x, p.y + 5, 9);
+    this.glow(
+      p.x,
+      p.y - 5,
+      c,
+      isRune ? 24 : 17,
+      isRune && item.active ? 0.38 : 0.25,
+    );
     if (isRune) {
-      this.rect(p.x - 9, p.y - 13, 18, 22, "#2c6556");
-      this.rect(p.x - 8, p.y - 13, 16, 2, c);
+      this.rect(p.x - 11, p.y + 5, 22, 5, "#233d34");
+      this.rect(p.x - 9, p.y - 13, 18, 21, "#2c6556");
+      this.rect(p.x - 7, p.y - 14, 14, 2, "#7baf94");
+      this.rect(p.x - 8, p.y - 11, 2, 16, "#477e66");
+      this.rect(p.x + 7, p.y - 11, 2, 18, "#1c4239");
+      this.rect(p.x - 7, p.y + 5, 14, 2, c + "80");
       this.rune(p.x, p.y - 3, c);
       this.text(item.active ? "✓" : `R${item.id + 1}`, p.x, p.y - 19, c, 8);
       if (item.progress > 0 && !item.active)
@@ -358,7 +316,18 @@ export class Renderer {
     } else {
       const bob = Math.sin(this.time * 3 + item.id) * 2;
       this.diamond(p.x, p.y - 5 + bob, 5, 8, c, "#fff4c1");
-      this.text("✦", p.x, p.y - 18 + bob, c, 8);
+      this.poly(
+        [
+          [p.x, p.y - 13 + bob],
+          [p.x + 5, p.y - 5 + bob],
+          [p.x, p.y + 3 + bob],
+        ],
+        "#dda950",
+      );
+      this.rect(p.x - 2, p.y - 8 + bob, 2, 3, "#fff6ca");
+      const sparkle = Math.sin(this.time * 4 + item.id) > 0.5;
+      if (sparkle || this.reducedMotion.matches)
+        this.text("✦", p.x + 7, p.y - 15, c, 8);
     }
   }
   bridgeObject(bridge, statue, solo) {
@@ -432,14 +401,33 @@ export class Renderer {
       hidden = p.state === PlayerState.HIDDEN;
     if (game.players.some((other) => other !== p && sameTile(other, p)))
       s.x += p.id === 0 ? -5 : 5;
+    const color = p.id ? "#ffb296" : "#89dff4";
     this.shadow(s.x, s.y + 7, 10);
+    c.beginPath();
+    c.ellipse(s.x, s.y + 7, 11, 5, 0, 0, Math.PI * 2);
+    c.strokeStyle = color;
+    c.lineWidth = 1.2;
+    c.stroke();
+    if (p.dashTime > 0 && p.motion && !this.reducedMotion.matches) {
+      const start = toScreen(p.motion.from.x, p.motion.from.y);
+      for (const t of [0.3, 0.6]) {
+        c.save();
+        c.globalAlpha = t * 0.32;
+        drawSprite(
+          c,
+          "explorer",
+          start.x + (s.x - start.x) * t,
+          start.y + (s.y - start.y) * t + 9,
+          { red: p.id === 1, scale: 1.5, facing: p.facing },
+        );
+        c.restore();
+      }
+    }
     c.save();
     if (hidden) c.globalAlpha = 0.45;
-    drawSprite(c, "explorer", s.x, s.y + 9, {
+    this.actor(p, "explorer", s, {
       red: p.id === 1,
       scale: 1.5,
-      frame: p.moving ? Math.floor(this.time * 9) : 0,
-      facing: p.facing,
     });
     if (game.flag.carrier === p.id && !game.flag.flight)
       this.flag(s.x + 13, s.y - 6, true);
@@ -451,7 +439,12 @@ export class Renderer {
       c.fill();
       c.strokeStyle = captured ? "#b1f4fc" : "#fce3a0";
       c.stroke();
+      c.beginPath();
+      c.ellipse(s.x - 6, s.y - 15, 4, 7, -0.5, Math.PI, Math.PI * 1.8);
+      c.strokeStyle = captured ? "#e2fbff" : "#fff3cf";
+      c.stroke();
     }
+    if (!hidden && !captured) this.rect(s.x - 5, s.y - 36, 10, 10, "#092a27e0");
     this.text(
       hidden ? "OCULTO" : captured ? "RUEDA" : String(p.id + 1),
       s.x,
@@ -466,10 +459,11 @@ export class Renderer {
     const pos = renderPosition(g),
       s = toScreen(pos.x, pos.y);
     this.shadow(s.x, s.y + 7, 12);
-    drawSprite(this.ctx, g.type, s.x, s.y + 10, {
+    if (g.type === "spirit") this.glow(s.x, s.y - 10, "#74f3ec", 22, 0.25);
+    if (g.state === GuardState.WINDUP)
+      this.glow(s.x, s.y, ENEMIES[g.type].color, 23, 0.4);
+    this.actor(g, g.type, s, {
       scale: g.type === "warden" ? 1.9 : g.type === "hunter" ? 1.1 : 1.55,
-      facing: g.facing,
-      frame: g.moving ? Math.floor(this.time * 6) : 0,
     });
     if (g.state === GuardState.WINDUP) {
       this.text("!", s.x, s.y - 29, ENEMIES[g.type].color, 13);
@@ -480,7 +474,16 @@ export class Renderer {
         ENEMIES[g.type].color,
       );
     } else if (g.state === GuardState.STUNNED) {
-      this.text("✦ ✦", s.x, s.y - 29, "#c7ffd7", 9);
+      for (let i = 0; i < 3; i++) {
+        const angle = this.time * 3 + (i * Math.PI * 2) / 3;
+        this.text(
+          "✦",
+          s.x + Math.cos(angle) * 10,
+          s.y - 28 + Math.sin(angle) * 3,
+          "#c7ffd7",
+          8,
+        );
+      }
       this.bar(s.x, s.y + 12, g.stunTime / 2.2);
     } else if (g.state === GuardState.RECOVER)
       this.text("···", s.x, s.y - 29, "#d3e5c5", 10);
@@ -489,35 +492,118 @@ export class Renderer {
     if (g.markedTime > 0) this.text("◇", s.x + 14, s.y - 26, "#ffec9a", 12);
   }
   consume(events) {
+    const styles = {
+      rune: { color: "#a1f4d1", label: "RUNA ACTIVADA", count: 16 },
+      relic: { color: "#ffe199", label: "+ TESORO", count: 14 },
+      flag: { color: "#ffe199", label: "¡A LA ENTRADA!", count: 22 },
+      heal: { color: "#ffb49d", label: "+1 ♥", count: 12 },
+      rescue: { color: "#b5f5e0", label: "¡LIBRE!", count: 20 },
+      combo: { color: "#def3a0", label: "¡COMBO!", count: 18 },
+      hurt: { color: "#ffaf94", label: "−1 ♥", count: 10 },
+      capture: { color: "#a2e8ff", label: "¡RESCATE!", count: 14 },
+      bridge: { color: "#d7e9a1", label: "PUENTE ABIERTO", count: 24 },
+      statue: { color: "#ffe199", label: "ESTATUA CARGADA", count: 18 },
+      impact: { color: "#e1bf86", count: 8 },
+      leaves: { color: "#99c982", count: 6 },
+      dash: { color: "#e9dfba", count: 5 },
+      pass: { color: "#ffe199", count: 8 },
+      light: { color: "#fff3b8", count: 14 },
+      trap: { color: "#9bd5cb", count: 6 },
+      victory: { color: "#ffe199", label: "¡RELIQUIA A SALVO!", count: 40 },
+    };
     for (const e of events) {
-      if (e.type === "start") {
+      if (e.type === "start" || e.type === "round") {
         this.particles = [];
+        this.effects = [];
         continue;
       }
-      if (e.x === undefined) continue;
+      const style = styles[e.type];
+      if (e.x === undefined || !style) continue;
       const p = toScreen(e.x, e.y);
-      for (let i = 0; i < (e.type === "victory" ? 40 : 8); i++)
+      if (style.label)
+        this.effects.push({
+          x: p.x,
+          y: p.y,
+          color: style.color,
+          label: style.label,
+          life: 1.15,
+          duration: 1.15,
+        });
+      if (this.reducedMotion.matches) continue;
+      for (let i = 0; i < style.count; i++) {
+        const angle = (Math.PI * 2 * i) / style.count,
+          speed = 10 + Math.random() * 25;
+        const life = 0.35 + Math.random() * 0.45;
         this.particles.push({
           x: p.x,
-          y: p.y - 8,
-          vx: (Math.random() - 0.5) * 35,
-          vy: -15 - Math.random() * 25,
-          life: 0.5 + Math.random() * 0.5,
-          color: ["#f4d38b", "#9adbc4", "#f0b096"][i % 3],
+          y: p.y - 5,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 15,
+          life,
+          duration: life,
+          size: e.type === "leaves" ? 3 : 2,
+          color: i % 3 ? style.color : "#fff0c9",
         });
+      }
     }
+    this.particles = this.particles.slice(-220);
+    this.effects = this.effects.slice(-10);
+  }
+  drawEffects(dt, map) {
+    const c = this.ctx,
+      reduced = this.reducedMotion.matches;
+    for (const p of this.particles) {
+      p.life -= dt;
+      if (reduced) continue;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 30 * dt;
+      c.globalAlpha = Math.max(0, p.life / p.duration);
+      this.rect(p.x, p.y, p.size, p.size, p.color);
+    }
+    c.globalAlpha = 1;
+    this.particles = this.particles.filter((p) => p.life > 0);
+    for (const e of this.effects) {
+      e.life -= dt;
+      const t = 1 - e.life / e.duration;
+      c.save();
+      c.globalAlpha = Math.min(1, Math.max(0, e.life * 4));
+      if (!reduced) {
+        c.strokeStyle = e.color;
+        c.lineWidth = 1;
+        c.beginPath();
+        c.ellipse(e.x, e.y + 3, 8 + t * 19, 4 + t * 8, 0, 0, Math.PI * 2);
+        c.stroke();
+      }
+      const width = e.label.length * 5 + 10;
+      const x = Math.max(
+        CONFIG.originX + width / 2,
+        Math.min(CONFIG.originX + map.width * S - width / 2, e.x),
+      );
+      const y = Math.max(
+        CONFIG.originY + 13,
+        e.y - 38 - (reduced ? 0 : t * 10),
+      );
+      this.rect(x - width / 2, y - 9, width, 13, "#102e28eb");
+      this.text(e.label, x, y, e.color, 8);
+      c.restore();
+    }
+    this.effects = this.effects.filter((e) => e.life > 0);
   }
   draw(game, dt = 1 / 60) {
-    this.time += dt;
+    // Pausing freezes visual time too. Reduced motion removes decorative movement.
+    dt = game.state === GameState.PAUSED ? 0 : dt;
+    this.time = this.reducedMotion.matches ? 0 : this.time + dt;
     const c = this.ctx;
     const expanded = game.state !== GameState.MENU && this.wideScreen.matches;
-    const width = expanded
+    const responsive = expanded || game.state === GameState.MENU;
+    const width = responsive
       ? Math.max(1, this.viewportSize.width)
       : CONFIG.width;
-    const height = expanded
+    const height = responsive
       ? Math.max(1, this.viewportSize.height)
       : CONFIG.height;
-    const density = expanded ? Math.min(window.devicePixelRatio || 1, 2) : 1;
+    const density = responsive ? Math.min(window.devicePixelRatio || 1, 2) : 1;
     if (this.canvas.width !== Math.round(width * density))
       this.canvas.width = Math.round(width * density);
     if (this.canvas.height !== Math.round(height * density))
@@ -547,22 +633,22 @@ export class Renderer {
       c.scale(scale, scale);
     }
     if (game.state === GameState.MENU && this.keyArtReady) {
+      const artScale = Math.max(
+        width / this.keyArt.width,
+        height / this.keyArt.height,
+      );
       c.drawImage(
         this.keyArt,
-        0,
-        100,
-        this.keyArt.width,
-        this.keyArt.height - 100,
-        0,
-        0,
-        CONFIG.width,
-        CONFIG.height,
+        width - this.keyArt.width * artScale,
+        (height - this.keyArt.height * artScale) / 2,
+        this.keyArt.width * artScale,
+        this.keyArt.height * artScale,
       );
-      const gradient = c.createLinearGradient(0, 0, CONFIG.width, 0);
+      const gradient = c.createLinearGradient(0, 0, width, 0);
       gradient.addColorStop(0, "#09271bed");
       gradient.addColorStop(0.7, "#09271b08");
       c.fillStyle = gradient;
-      c.fillRect(0, 0, CONFIG.width, CONFIG.height);
+      c.fillRect(0, 0, width, height);
     } else {
       if (
         this.cachedMap !== game.map ||
@@ -570,24 +656,32 @@ export class Renderer {
       )
         this.cacheFloor(game.map);
       c.drawImage(this.groundLayer, 0, 0);
-      this.water(game.map);
-      this.signals(game);
+      paintWater(this, game.map);
+      paintAtmosphere(this, game.map);
       // Ground objects precede sprites, so walls and decorations never hide an explorer.
       for (let y = 0; y < game.map.height; y++)
         for (let x = 0; x < game.map.width; x++)
           if (tileAt(game.map, x, y) === TILE.BUSH) {
             const p = toScreen(x + 0.5, y + 0.5);
-            if (!drawArt(c, 7, p.x, p.y + 9, 24)) {
-              this.rect(p.x - 10, p.y - 9, 20, 20, this.palette.bush);
+            c.save();
+            const sway = this.reducedMotion.matches
+              ? 0
+              : Math.sin(this.time * 1.8 + x * 0.7 + y) * 0.025;
+            c.translate(p.x, p.y + 9);
+            c.transform(1, 0, sway, 1, 0, 0);
+            if (!drawArt(c, 7, 0, 0, 25)) {
+              this.rect(-10, -18, 20, 20, this.palette.bush);
             }
+            c.restore();
           }
       const pos = game.map.pedestal,
         s = toScreen(pos.x, pos.y);
+      this.glow(s.x, s.y - 8, "#ffe3a2", 28, game.sealOpen() ? 0.5 : 0.15);
       this.rect(s.x - 13, s.y - 11, 26, 23, this.palette.shadow);
       this.rect(s.x - 11, s.y - 12, 22, 20, this.palette.stone);
       this.rune(s.x, s.y - 3, this.palette.accent);
       if (game.flag.state === FlagState.ON_PEDESTAL) {
-        this.flag(s.x, s.y + 1);
+        this.flag(s.x, s.y + 1 + Math.sin(this.time * 2.5) * 1.5);
         this.text(
           game.sealOpen() ? "RELIQUIA" : "SELLADA",
           s.x,
@@ -609,6 +703,7 @@ export class Renderer {
       game.relics
         .filter((r) => !r.collected)
         .forEach((r) => this.objectiveObject(r, false));
+      this.signals(game);
       const actors = [
         ...game.guards.map((g) => ({ body: g, draw: () => this.guard(g) })),
         ...game.players.map((p) => ({
@@ -624,14 +719,17 @@ export class Renderer {
         if (p.vineFlash > 0 && p.vineTarget) {
           const from = toScreen(p.x, p.y),
             to = toScreen(p.vineTarget.x, p.vineTarget.y);
-          this.line(
-            [
-              [from.x, from.y - 10],
-              [to.x, to.y - 8],
-            ],
-            "#d2e69a",
-            2,
-          );
+          const curve = this.reducedMotion.matches
+            ? 0
+            : Math.sin((p.vineFlash / 0.3) * Math.PI) * 10;
+          const points = [
+            [from.x, from.y - 10],
+            [(from.x + to.x) / 2, (from.y + to.y) / 2 - 9 + curve],
+            [to.x, to.y - 8],
+          ];
+          this.line(points, "#264c36", 4);
+          this.line(points, "#d2e69a", 2);
+          this.diamond(to.x, to.y - 8, 3, 3, "#e2f4ac");
         }
       if (game.flag.flight) {
         const f = game.flag.flight,
@@ -669,16 +767,7 @@ export class Renderer {
           8,
         );
     }
-    for (const p of this.particles) {
-      p.life -= dt;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.vy += 20 * dt;
-      c.globalAlpha = Math.max(0, p.life);
-      this.rect(p.x, p.y, 2, 2, p.color);
-    }
-    c.globalAlpha = 1;
-    this.particles = this.particles.filter((p) => p.life > 0);
+    this.drawEffects(dt, game.map);
     c.restore();
   }
 }

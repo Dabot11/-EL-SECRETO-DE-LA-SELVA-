@@ -27,7 +27,7 @@
             ></span
           >
         </a>
-        <span class="edition"><i></i> PIXEL ART · AVENTURA 5.2</span>
+        <span class="edition"><i></i> PIXEL ART · AVENTURA 5.3</span>
       </header>
 
       <main>
@@ -115,15 +115,21 @@
               </button>
             </div>
             <div class="scene-caption">
-              <span class="caption-line"></span> EL PUENTE DEL JAGUAR TE ESPERA.
+              <span class="caption-line"></span> 10 DESTINOS · UNA GRAN AVENTURA
             </div>
           </section>
 
           <div id="hud" class="hud" hidden>
             <div class="hud-top">
               <div class="mission">
-                <small id="mission-progress">MISIÓN 1 DE 10</small
-                ><strong id="objective">Encuentra la reliquia</strong
+                <small id="mission-progress">MISIÓN 1 DE 10</small>
+                <h2 id="hud-mission-name">El Puente del Jaguar</h2>
+                <ol class="objective-steps" aria-label="Etapas de la misión">
+                  <li id="step-seal"><span>01</span> Abre</li>
+                  <li id="step-relic"><span>02</span> Recoge</li>
+                  <li id="step-home"><span>03</span> Vuelve</li>
+                </ol>
+                <strong id="objective">Encuentra la reliquia</strong
                 ><span id="flag-status">⚑ En el pedestal</span>
                 <div class="mission-counters">
                   <span id="rune-count"></span><span id="relic-count"></span
@@ -140,19 +146,19 @@
             </div>
             <div class="hud-bottom">
               <div class="players-info">
-                <div class="player-info blue">
+                <div class="player-info blue" id="player-one-panel">
                   <canvas
                     id="portrait-blue"
                     width="40"
                     height="48"
                     aria-hidden="true"
                   ></canvas
-                  ><span
+                  ><span class="player-heading"
                     ><strong id="player-one-role">EXPLORADOR</strong
-                    ><small id="player-one-status">W A S D</small
-                    ><small id="tools-one" class="tool-status"></small
-                    ><small id="dash-one"></small
-                  ></span>
+                    ><small id="player-one-status">W A S D</small></span
+                  >
+                  <div id="tools-one" class="tool-status"></div>
+                  <div id="dash-one" class="ability dash-status"></div>
                 </div>
                 <div class="player-info red" id="player-two-panel">
                   <canvas
@@ -161,12 +167,12 @@
                     height="48"
                     aria-hidden="true"
                   ></canvas
-                  ><span
+                  ><span class="player-heading"
                     ><strong>ROJO · LIANA</strong
-                    ><small id="player-two-status">↑ ← ↓ →</small
-                    ><small id="tools-two" class="tool-status"></small
-                    ><small id="dash-two"></small
-                  ></span>
+                    ><small id="player-two-status">↑ ← ↓ →</small></span
+                  >
+                  <div id="tools-two" class="tool-status"></div>
+                  <div id="dash-two" class="ability dash-status"></div>
                 </div>
               </div>
               <button
@@ -326,8 +332,8 @@
           <p class="campaign-note">
             Tres estrellas: completar · reunir los 3 tesoros · expedición
             limpia. Solo: máximo 1 golpe. Dúo: sin perder intentos y máximo 2
-            capturas. Tus estrellas y récords se conservan. Completa la misión
-            5 para abrir el nuevo capítulo.
+            capturas. Tus estrellas y récords se conservan. Completa la misión 5
+            para abrir el nuevo capítulo.
           </p>
         </section>
         <section class="bestiary" aria-label="Conoce a los guardianes">
@@ -417,7 +423,7 @@
         <span
           >UNA IDEA DE DAVID Y TAVITO <span class="footer-star">✦</span> HECHA
           PARA EXPLORAR</span
-        ><span>10 MISIONES <span class="footer-divider">/</span> V.5.2</span>
+        ><span>10 MISIONES <span class="footer-divider">/</span> V.5.3</span>
       </footer>
     </div>
     <script type="module" src="./src/main.js"></script>
