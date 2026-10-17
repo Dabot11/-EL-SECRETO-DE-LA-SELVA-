@@ -193,7 +193,10 @@ test("el puente sella la isla; solo el salto del jaguar carga la estatua", () =>
     guard = g.guards[0],
     statue = g.bridge.statue;
   assert.equal(findPath(g.map, g.map.base, g.map.pedestal).length, 0);
-  assert.equal(canOccupy(g.map, 8.5, 4.5), false);
+  assert.equal(
+    canOccupy(g.map, g.bridge.tiles[0][0] + 0.5, g.bridge.tiles[0][1] + 0.5),
+    false,
+  );
   place(g.players[0], g.map.pedestal.x, g.map.pedestal.y);
   g.collectFlag();
   assert.equal(g.flag.state, FlagState.ON_PEDESTAL);
@@ -236,7 +239,9 @@ test("abrir exige estatua cargada, luz vigente y liana; ambos modos pueden hacer
     assert.equal(g.bridge.open, true);
     assert.ok(g.map.revision > revision);
     assert.ok(findPath(g.map, g.map.base, g.map.pedestal).length);
-    assert.ok(canOccupy(g.map, 8.5, 4.5));
+    assert.ok(
+      canOccupy(g.map, g.bridge.tiles[0][0] + 0.5, g.bridge.tiles[0][1] + 0.5),
+    );
     g.retryMission();
     assert.equal(g.bridge.open, false);
     assert.equal(g.bridge.charged, false);
@@ -291,19 +296,20 @@ test("no se pasa a un cautivo ni fuera de alcance; el agua permite un pase", () 
   g.map.cells[6][7] = "~";
   assert.equal(g.passFlag(blue), true);
 });
-test("el portador camina más lento; pasar permite que el compañero tome el relevo", () => {
+test("cargar ralentiza la frecuencia de pasos, nunca la longitud de una casilla", () => {
   for (const mode of [1, 2]) {
     const g = arena(mode),
       p = g.players[0];
     g.takeFlag(p);
     const before = { ...p };
-    g.movePlayer(p, { x: 1, y: 0 }, 0.05);
-    const move = projectVector(p.x - before.x, p.y - before.y);
+    g.movePlayer(p, { x: 1, y: 0 }, 0.01);
+    assert.equal(p.x, before.x + 1);
+    assert.equal(p.y, before.y);
     assert.ok(
       Math.abs(
-        Math.hypot(move.x, move.y) -
-          CONFIG.playerSpeed * (mode === 1 ? 0.93 : 0.78) * 0.05,
-      ) < 0.001,
+        p.motion.duration -
+          CONFIG.tileWidth / (CONFIG.playerSpeed * (mode === 1 ? 0.93 : 0.78)),
+      ) < 0.0001,
     );
   }
 });
@@ -320,7 +326,8 @@ test("la burbuja rueda sin impulso ni herramientas; la liana acerca y el rescate
   assert.equal(blue.dashTime, 0);
   assert.equal(g.useLight(blue), false);
   assert.equal(g.useVine(red), true);
-  assert.ok(distance(blue, red) < 0.7);
+  tick(g, 0.2);
+  assert.ok(distance(blue, red) <= CONFIG.rescueRadius);
   assert.equal(blue.state, PlayerState.CAPTURED);
   g.rescue(0.3);
   assert.equal(blue.state, PlayerState.CAPTURED);
@@ -345,11 +352,13 @@ test("la liana no arrastra burbujas a través del agua ni de paredes", () => {
 test("rescatar tiene prioridad sobre un mecanismo sin activar", () => {
   const g = fixture();
   g.guards = [];
-  place(g.players[0], 6, 10.5);
-  place(g.players[1], 7.5, 10.5);
+  const w = g.bridge.winch;
+  place(g.players[0], w.x - 1, w.y);
+  place(g.players[1], w.x + 1, w.y);
   g.capture(g.players[0]);
   assert.equal(g.useVine(g.players[1]), true);
-  assert.ok(distance(...g.players) < 0.7);
+  tick(g, 0.05);
+  assert.ok(distance(...g.players) <= CONFIG.rescueRadius);
   assert.equal(g.bridge.open, false);
 });
 test("curarse no borra golpes; encadenar combos y pases no regala puntuación", () => {
@@ -398,11 +407,12 @@ test("migra desbloqueos y misión v3, conserva su copia y separa los récords v4
 test("un mecanismo cerrado y un tesoro no roban el combo de un guardián marcado", () => {
   const g = fixture();
   const [blue, red] = g.players;
-  place(blue, 6.5, 8.5);
-  place(red, 6.5, 8.5);
+  const w = g.bridge.winch;
+  place(blue, w.x - 1, w.y);
+  place(red, w.x - 1, w.y);
   g.guards = [g.guards[0]];
-  Object.assign(g.guards[0], { x: 7.5, y: 8.5 });
-  g.relics = [{ x: 6.5, y: 8.5, collected: false }];
+  Object.assign(g.guards[0], { x: w.x, y: w.y });
+  g.relics = [{ x: blue.x, y: blue.y, collected: false }];
   assert.equal(g.useLight(blue), true);
   assert.equal(g.useVine(red), true);
   assert.equal(g.stats.combos, 1);

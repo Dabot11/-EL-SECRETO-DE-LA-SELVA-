@@ -3,12 +3,12 @@ import { TILE, isWalkable, tileAt } from "./map.js";
 
 export const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export const projectVector = (x, y) => ({
-  x: ((x - y) * CONFIG.tileWidth) / 2,
-  y: ((x + y) * CONFIG.tileHeight) / 2,
+  x: x * CONFIG.tileWidth,
+  y: y * CONFIG.tileHeight,
 });
 export const unprojectVector = (x, y) => ({
-  x: x / CONFIG.tileWidth + y / CONFIG.tileHeight,
-  y: y / CONFIG.tileHeight - x / CONFIG.tileWidth,
+  x: x / CONFIG.tileWidth,
+  y: y / CONFIG.tileHeight,
 });
 
 export function canOccupy(map, x, y, r = CONFIG.bodyRadius) {

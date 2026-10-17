@@ -2,7 +2,9 @@
 
 Una aventura de **David y Tavito**, para uno o dos jugadores en la misma computadora.
 
-**Versión 4:** un explorador autosuficiente en solitario; linterna, liana, pases y rescates en equipo al jugar de dos. La primera misión, **El Puente del Jaguar**, estrena un encuentro que se resuelve de forma distinta según la modalidad. Las herramientas y las reglas de cada modo funcionan en las cinco misiones; las otras cuatro conservan sus objetivos de runas.
+**Versión 5:** cámara desde arriba, suelo rectangular y movimiento de cuatro direcciones, casilla por casilla. Los cinco mapas pasan de 18 × 14 a **28 × 20 casillas**: 560 cuadros, más del doble que antes. Se mantienen un explorador con dos herramientas en solitario y las habilidades complementarias del dúo.
+
+Los enemigos, sus patrullas y sus embestidas también avanzan por casillas. Los avisos muestran los cuadros que puede golpear cada ataque. La cámara mantiene el mapa completo visible para ambos jugadores.
 
 [Jugar en GitHub Pages](https://dabot11.github.io/-EL-SECRETO-DE-LA-SELVA-/)
 
@@ -44,14 +46,16 @@ Reintentar reinicia la misión actual y restaura corazones o intentos. En solita
 | Pasar la reliquia          | F, solo en dúo        | L             |
 | Pausar o continuar         | Escape o P            | Escape o P    |
 
-Las direcciones corresponden a la pantalla; las diagonales no dan más velocidad. El impulso protege durante 0,2 s y recarga en 3,5 s. No atraviesa agua ni muros. Las herramientas también tienen recarga; el HUD muestra cuándo están listas. Mantener una tecla no repite la acción. Cambiar de pestaña pausa el juego.
+Una pulsación mueve **un cuadro completo** hacia arriba, abajo, izquierda o derecha. Mantener la tecla encadena pasos. Si pulsas otra dirección durante un paso, el giro espera al siguiente cuadro. Si sostienes dos teclas, manda la última que pulsaste. No hay diagonales ni deslizamientos por las esquinas.
+
+El **impulso** es un paso rápido de una casilla, con protección durante ese paso y recarga de 3,5 s. No atraviesa agua ni muros; intentar usarlo contra un obstáculo no gasta la recarga. El HUD muestra cuándo están disponibles las herramientas. Mantener una tecla de habilidad no la repite. Cambiar de pestaña pausa la partida y descarta órdenes de movimiento pendientes.
 
 ## Luz, liana y cooperación
 
 - La **linterna** interrumpe a guardianes próximos y los marca. La **liana sobre un guardián marcado** lo inmoviliza durante 2,2 s: en solitario encadenas E y Q; en dúo coordinas E y Enter.
 - La liana también recupera tesoros y la reliquia cuando su sello está abierto. Prioriza rescatar a un cautivo, abrir un mecanismo iluminado y completar un combo antes de buscar objetos. Los muros bloquean herramientas y pases.
-- En dúo, el portador camina un 22 % más lento y atrae más la atención de los guardianes. **F / L** pasa la reliquia al compañero a hasta cuatro casillas, incluso sobre agua. El receptor obtiene 0,45 s de protección; entre pases hay 0,8 s de espera. En solitario la penalización al cargar es del 7 %.
-- Una burbuja puede rodar lentamente por suelo transitable, sin herramientas ni impulso. Rojo puede acercar la burbuja azul con la liana cuando hay un camino libre. Azul puede interrumpir al guardián con luz para acercarse a rescatar al rojo. Permanecer juntos 0,6 s completa el rescate; alejarse interrumpe la barra.
+- En dúo, el portador tarda más entre pasos: su velocidad baja un 22 % y atrae más la atención de los guardianes. **F / L** pasa la reliquia al compañero a hasta cuatro casillas, incluso sobre agua. El receptor obtiene 0,45 s de protección; entre pases hay 0,8 s de espera. En solitario la penalización al cargar es del 7 %.
+- Una burbuja puede rodar casilla por casilla, lentamente y por suelo transitable, sin herramientas ni impulso. Rojo puede acercar la burbuja azul con la liana cuando hay un camino libre. Azul puede interrumpir al guardián con luz para acercarse a rescatar al rojo. Permanecer juntos 0,6 s completa el rescate; alejarse interrumpe la barra.
 - El rescatado recibe 1,5 s de protección y quien lo libera 0,8 s. Capturar al portador en dúo deja la reliquia en el suelo; en solitario un golpe consume un corazón y se conserva la reliquia.
 
 ## Cinco misiones
@@ -68,7 +72,7 @@ En la primera misión, coloca la estatua entre el jaguar y tú: cuando aparezca 
 
 En los otros mapas, permanece 0,65 s cerca de cada runa para abrir el sello. Los tres tesoros dorados por misión son opcionales. Después recupera la reliquia y regresa a la entrada. Tomarla activa una alarma: aumenta la persecución y acelera la música; el campamento deja de curar.
 
-Los arbustos ocultan automáticamente. Los guardianes anuncian los ataques en el suelo, se recuperan después y persiguen dentro de su territorio. El centinela golpea un círculo corto, el jaguar salta en línea recta, el espíritu emite un pulso amplio y el Solar carga un gran golpe. Las trampas avisan antes de frenar. No hay límite de tiempo.
+Los arbustos ocultan automáticamente. Los guardianes anuncian los ataques en el suelo, se recuperan después y persiguen dentro de su territorio. El centinela marca una cruz corta, el jaguar se alinea y recorre hasta tres cuadros en una fila o columna, el espíritu marca un área de hasta dos pasos y el Solar prepara una zona cuadrada de hasta 5 × 5. Los muros bloquean los avisos y los golpes. Las trampas avisan antes de frenar. No hay límite de tiempo.
 
 ## Progreso y estrellas
 
@@ -76,7 +80,7 @@ Cada misión concede una estrella por terminar, otra por reunir los tres tesoros
 
 El menú permite repetir misiones desbloqueadas. Se guardan mejores tiempos, puntuación y estrellas por modalidad. **Continuar** reinicia la misión pendiente; no restaura posiciones exactas. El guardado es local al navegador y dispositivo.
 
-La versión 4 conserva los desbloqueos válidos y la misión pendiente de v3. Estrena récords porque las reglas cambiaron; la copia de v3 permanece en el navegador. Si el almacenamiento está bloqueado o dañado, se puede seguir jugando durante la sesión.
+La versión 5 conserva los desbloqueos válidos y la misión pendiente de v3 y v4. Los récords de los mapas más grandes empiezan de nuevo; las copias anteriores permanecen en el navegador. Si el almacenamiento está bloqueado o dañado, se puede seguir jugando durante la sesión.
 
 ## Música y sonido
 
@@ -100,4 +104,4 @@ El workflow `.github/workflows/pages.yml` prueba y publica los cambios de `main`
 
 ## Organización
 
-`src/game.js` coordina la partida; `abilities.js` resuelve herramientas y pases; `ai.js` controla guardianes. `missions.js`, `challenges.js` y `map.js` definen geometría y objetivos. `collisions.js` y `navigation.js` gestionan movimiento y rutas. `renderer.js` y `sprites.js` dibujan; `input.js` y `ui.js` conectan teclado e interfaz. `progress.js` guarda el avance; `audio.js` sintetiza la música y los efectos.
+`src/game.js` coordina la partida; `abilities.js` resuelve herramientas y pases; `ai.js` controla guardianes. `missions.js`, `challenges.js` y `map.js` definen geometría y objetivos. `grid.js` limita los pasos a vecinos cardinales y anima la transición; `collisions.js` y `navigation.js` gestionan obstáculos y rutas. `renderer.js` y `sprites.js` dibujan; `input.js` y `ui.js` conectan teclado e interfaz. `progress.js` guarda el avance; `audio.js` sintetiza la música y los efectos.

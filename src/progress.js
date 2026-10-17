@@ -1,5 +1,5 @@
-const KEY = "selva-progress-v4";
-const LEGACY_KEY = "selva-progress-v3";
+const KEY = "selva-progress-v5";
+const LEGACY_KEYS = ["selva-progress-v4", "selva-progress-v3"];
 const validIndex = (n) => Number.isInteger(n) && n >= 0 && n < 5;
 const validMode = (n) => n === 1 || n === 2;
 const validRecord = (r) =>
@@ -23,7 +23,7 @@ export class Progress {
     this.storage = storage;
     this.available = !!storage;
     this.data = {
-      version: 2,
+      version: 3,
       checkpoint: null,
       unlocked: { 1: 1, 2: 1 },
       records: { 1: Array(5).fill(null), 2: Array(5).fill(null) },
@@ -32,17 +32,20 @@ export class Progress {
       const current = JSON.parse(storage?.getItem(KEY) ?? "null");
       const legacy =
         current == null
-          ? JSON.parse(storage?.getItem(LEGACY_KEY) ?? "null")
+          ? JSON.parse(
+              LEGACY_KEYS.map((key) => storage?.getItem(key)).find(Boolean) ??
+                "null",
+            )
           : null;
       const saved =
-        current?.version === 2
+        current?.version === 3
           ? current
-          : legacy?.version === 1
+          : [1, 2].includes(legacy?.version)
             ? legacy
             : null;
       if (!saved) return;
       for (const mode of [1, 2]) {
-        if (saved.version === 2 && Number.isInteger(saved.unlocked?.[mode]))
+        if (saved.version >= 2 && Number.isInteger(saved.unlocked?.[mode]))
           this.data.unlocked[mode] = Math.max(
             1,
             Math.min(5, saved.unlocked[mode]),
@@ -54,7 +57,7 @@ export class Progress {
             this.data.unlocked[mode],
             Math.min(5, i + 2),
           );
-          if (saved.version === 2)
+          if (saved.version === 3)
             this.data.records[mode][i] = {
               stars: record.stars,
               time: record.time,

@@ -5,12 +5,8 @@ import {
   FlagState,
   GuardState,
 } from "./config.js";
-import {
-  distance,
-  hasLineOfSight,
-  canTravelStraight,
-  moveBody,
-} from "./collisions.js";
+import { findPath } from "./navigation.js";
+import { distance, hasLineOfSight, canTravelStraight } from "./collisions.js";
 
 const free = (p) => p && p.state !== PlayerState.CAPTURED;
 const visible = (g, p, target, range) =>
@@ -80,15 +76,12 @@ export function useVine(game, player) {
   );
   if (captive) {
     cast(captive);
-    const d = distance(player, captive),
-      amount = Math.max(0, d - 0.45) / Math.max(0.01, d);
-    moveBody(
-      captive,
-      (player.x - captive.x) * amount,
-      (player.y - captive.y) * amount,
-      game.map,
+    const path = findPath(game.map, captive, player);
+    const target = path.at(-2) ?? path[0];
+    captive.pullTarget = target ? { ...target } : null;
+    game.notify(
+      "¡Acercando la burbuja! Quédate cerca para completar el rescate.",
     );
-    game.notify("¡Burbuja a salvo! Quédate cerca para completar el rescate.");
     return true;
   }
   const nearWinch =

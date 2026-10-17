@@ -74,7 +74,7 @@ with sync_playwright() as playwright:
     page.locator('#game-canvas').focus()
     page.keyboard.down('d')
     page.keyboard.down('Space')
-    page.wait_for_timeout(140)
+    page.wait_for_timeout(360)
     check("Impulso azul con Espacio y movimiento",page.evaluate("app.game.stats.dashes===1 && app.game.players[0].dashCooldown>3"))
     page.wait_for_timeout(3600)
     check("Mantener Espacio no dispara impulsos repetidos",page.evaluate("app.game.stats.dashes===1"))
@@ -82,25 +82,52 @@ with sync_playwright() as playwright:
     page.keyboard.up('d')
     page.keyboard.down('ArrowRight')
     page.keyboard.press('ShiftRight')
-    page.wait_for_timeout(80)
+    page.wait_for_timeout(360)
     page.keyboard.up('ArrowRight')
     check("Impulso rojo independiente con Shift derecho",page.evaluate("app.game.stats.dashes===2 && app.game.players[1].dashCooldown>0"))
     check("HUD muestra runas, tesoros y recarga", 'PASO 1/3' in page.locator('#rune-count').inner_text() and 'TESOROS' in page.locator('#relic-count').inner_text() and 'RECARGA' in page.locator('#dash-two').inner_text())
 
+    page.evaluate("""() => {
+      const g=app.game;g.start(2,1);g.guards=[];g.runes=[];g.relics=[];g.traps=[];
+      g.map.cells=g.map.cells.map((row,y)=>row.map((t,x)=>x===0||y===0||x===g.map.width-1||y===g.map.height-1?'#':'.'));g.map.revision++;
+      Object.assign(g.players[0],{x:6.5,y:7.5,motion:null});app.input.clear();
+    }""")
+    page.locator('#game-canvas').focus()
+    page.keyboard.press('d')
+    page.wait_for_timeout(450)
+    check("Un toque real de D recorre una casilla completa y se detiene",page.evaluate("app.game.players[0].x===7.5 && app.game.players[0].y===7.5 && !app.game.players[0].motion"))
+    page.keyboard.down('w')
+    page.wait_for_timeout(65)
+    page.keyboard.down('d')
+    page.wait_for_timeout(65)
+    page.keyboard.up('w')
+    page.keyboard.up('d')
+    page.wait_for_timeout(550)
+    check("El giro solicitado durante el paso espera y no crea una diagonal",page.evaluate("app.game.players[0].x===8.5 && app.game.players[0].y===6.5 && !app.game.players[0].motion"))
+    page.keyboard.down('w')
+    page.wait_for_timeout(65)
+    page.keyboard.down('d')
+    page.wait_for_timeout(800)
+    page.keyboard.up('w')
+    page.keyboard.up('d')
+    page.wait_for_timeout(350)
+    check("Dos teclas sostenidas dan prioridad a la última dirección",page.evaluate("app.game.players[0].x>=10.5 && app.game.players[0].y===5.5"))
+    check("El tablero tiene 28 columnas y 20 filas",page.evaluate("app.game.map.width===28&&app.game.map.height===20&&app.renderer.canvas.width===960&&app.renderer.canvas.height===720"))
+
     # Deterministic interaction fixtures exercise the rendered game and HUD.
     page.evaluate("""() => {
       const g=app.game;g.start(2);g.guards=[];
-      Object.assign(g.players[0],{x:3.5,y:9.5,protection:0});g.update(.01);app.ui.update();
+      const [x,y]=g.map.bushGroups[0][0];Object.assign(g.players[0],{x:x+.5,y:y+.5,protection:0,motion:null});g.update(.01);app.ui.update();
     }""")
     check("Escondite sin tecla de interacción", page.evaluate("app.game.players[0].state === 'HIDDEN'") and "OCULTO" in page.locator("#player-one-status").inner_text())
     page.evaluate("""() => {
       const g=app.game;g.runes.forEach(r=>r.active=true);g.openBridge();
-      Object.assign(g.players[0],{x:14.5,y:2.5,protection:0,state:'NORMAL'});g.collectFlag();g.capture(g.players[0]);app.ui.update();
+      Object.assign(g.players[0],{x:g.map.pedestal.x,y:g.map.pedestal.y,protection:0,state:'NORMAL'});g.collectFlag();g.capture(g.players[0]);app.ui.update();
     }""")
     check("Captura, burbuja y bandera caída", page.evaluate("app.game.players[0].state === 'CAPTURED' && app.game.flag.state === 'DROPPED'") and "caída" in page.locator("#objective").inner_text())
     page.screenshot(path=str(OUTPUT / "capture.png"), full_page=True)
     page.evaluate("""() => {
-      const g=app.game;Object.assign(g.players[1],{x:14.5,y:2.5,protection:0});g.update(.01);g.rescue(.6);app.ui.update();
+      const g=app.game;Object.assign(g.players[1],{x:g.map.pedestal.x,y:g.map.pedestal.y,protection:0});g.update(.01);g.rescue(.6);app.ui.update();
     }""")
     check("Rescate y recuperación de bandera automáticos", page.evaluate("app.game.players[0].state === 'PROTECTED' && app.game.flag.carrier === 1 && app.game.attempts === 3"))
 
@@ -123,15 +150,15 @@ with sync_playwright() as playwright:
     check("Selección de modo individual", page.evaluate("app.game.mode === 1 && app.game.state === 'PLAYING'"))
 
     check("Solo muestra un explorador y tres corazones",page.evaluate("app.game.players.length===1 && app.game.players[0].hearts===3") and page.locator('#player-two-panel').is_hidden() and page.locator('#lives-label').inner_text()=='CORAZONES')
-    page.screenshot(path=str(OUTPUT / "solo-v4.png"),full_page=True)
+    page.screenshot(path=str(OUTPUT / "solo-v5.png"),full_page=True)
     page.evaluate("() => {app.game.guards=[];Object.assign(app.game.players[0],{x:5.5,y:11.5,protection:0,state:'NORMAL'});app.game.capture(app.game.players[0]);app.ui.update();}")
     check("El HUD descuenta un corazón sin burbuja",page.locator('#attempts .spent').count()==1 and page.evaluate("app.game.players[0].state==='PROTECTED'"))
     # Real key events exercise both tools, combos, relic passes and no auto-repeat.
     page.evaluate("""() => {
       const g=app.game;g.start(2,1);g.relics=[];g.traps=[];g.guards=[g.guards[0]];
-      g.map.cells=g.map.cells.map((row,y)=>row.map((t,x)=>x===0||y===0||x===17||y===13?'#':'.'));g.map.revision++;
-      Object.assign(g.players[0],{x:6.5,y:6.5,protection:9});Object.assign(g.players[1],{x:7,y:6.5,protection:9});
-      Object.assign(g.guards[0],{x:8,y:6.5,state:'STUNNED',stunTime:9});app.input.clear();
+      g.map.cells=g.map.cells.map((row,y)=>row.map((t,x)=>x===0||y===0||x===g.map.width-1||y===g.map.height-1?'#':'.'));g.map.revision++;
+      Object.assign(g.players[0],{x:6.5,y:6.5,protection:9});Object.assign(g.players[1],{x:7.5,y:6.5,protection:9});
+      Object.assign(g.guards[0],{x:8.5,y:6.5,state:'STUNNED',stunTime:9});app.input.clear();
     }""")
     page.locator('#game-canvas').focus()
     page.keyboard.press('e')
@@ -140,12 +167,12 @@ with sync_playwright() as playwright:
     page.keyboard.press('Enter')
     page.wait_for_timeout(70)
     check("Enter activa la liana roja y completa el combo",page.evaluate("app.game.stats.combos===1 && app.game.stats.vines===1"))
-    page.screenshot(path=str(OUTPUT / "combo-v4.png"),full_page=True)
+    page.screenshot(path=str(OUTPUT / "combo-v5.png"),full_page=True)
     page.evaluate("() => {app.game.guards=[];app.game.takeFlag(app.game.players[0]);}")
     page.keyboard.press('f')
     page.wait_for_timeout(70)
     check("F pasa la reliquia de azul a rojo",page.evaluate("app.game.flag.carrier===1 && app.game.stats.passes===1"))
-    page.screenshot(path=str(OUTPUT / "pass-v4.png"),full_page=True)
+    page.screenshot(path=str(OUTPUT / "pass-v5.png"),full_page=True)
     page.wait_for_timeout(820)
     page.keyboard.press('l')
     page.wait_for_timeout(70)
@@ -159,14 +186,14 @@ with sync_playwright() as playwright:
     page.keyboard.press('q')
     page.wait_for_timeout(70)
     check("Q abre el puente en solitario y actualiza el suelo dibujado",page.evaluate("app.game.bridge.open") and page.evaluate("app.renderer.groundLayer.toDataURL()")!=floor_before)
-    page.screenshot(path=str(OUTPUT / "bridge-open-v4.png"),full_page=True)
+    page.screenshot(path=str(OUTPUT / "bridge-open-v5.png"),full_page=True)
     page.wait_for_timeout(5100)
     check("Mantener E no repite la linterna al terminar la recarga",page.evaluate("app.game.stats.lights===1"))
     page.keyboard.up('e')
     page.evaluate("() => {app.game.retryMission();app.ui.update();}")
     page.wait_for_timeout(70)
     check("Reintentar cierra el puente también visualmente",page.evaluate("!app.game.bridge.open && app.renderer.cachedRevision===app.game.map.revision") and page.evaluate("app.renderer.groundLayer.toDataURL()") == floor_before)
-    page.screenshot(path=str(OUTPUT / "bridge-closed-v4.png"),full_page=True)
+    page.screenshot(path=str(OUTPUT / "bridge-closed-v5.png"),full_page=True)
     # Input activation of focused UI buttons must not consume either tool.
     page.locator('#pause').focus()
     page.keyboard.press('Enter')
@@ -280,6 +307,12 @@ with sync_playwright() as playwright:
         check(f"Botones del menú dentro de la escena a {width}px",page.locator('#how-to').evaluate("e=>e.getBoundingClientRect().bottom <= document.querySelector('.game-shell').getBoundingClientRect().bottom"))
         if width>700:
             check(f"Todo el juego cabe en pantalla a {width}×{height}",page.locator(".game-shell").evaluate("e=>e.getBoundingClientRect().bottom<=innerHeight"))
+            page.locator('#play-duo').click()
+            page.wait_for_timeout(160)
+            page.screenshot(path=str(OUTPUT / f"grid-game-{width}.png"),full_page=True)
+            check(f"Los indicadores quedan encima de los cuadros transitables a {width}px",page.locator('.hud-top').evaluate("e=>e.getBoundingClientRect().bottom <= document.querySelector('#game-canvas').getBoundingClientRect().top + document.querySelector('#game-canvas').getBoundingClientRect().height * 116 / 720"))
+            page.keyboard.press('Escape')
+            page.locator('#state-menu').click()
 
     migration = browser.new_page()
     migration.goto(BASE,wait_until='networkidle')

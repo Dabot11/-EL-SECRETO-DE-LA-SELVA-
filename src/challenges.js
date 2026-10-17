@@ -2,7 +2,7 @@
 // Coordinates refer to tile centers; no objective replaces collision geometry.
 export const CHALLENGES = [
   {
-    speed: 25,
+    speed: 46,
     par: 65,
     briefing:
       "Atrae al jaguar hacia la estatua, ilumina el mecanismo y abre el puente con la liana.",
@@ -24,7 +24,7 @@ export const CHALLENGES = [
     traps: [],
   },
   {
-    speed: 27,
+    speed: 48,
     par: 90,
     extraBridges: [
       [4, 7],
@@ -45,7 +45,7 @@ export const CHALLENGES = [
     traps: [{ x: 12, y: 6, offset: 1, type: "mist" }],
   },
   {
-    speed: 29,
+    speed: 50,
     par: 105,
     briefing:
       "Explora los tres senderos. Evita las esporas cuando el suelo se ilumine.",
@@ -65,10 +65,10 @@ export const CHALLENGES = [
     ],
   },
   {
-    speed: 31,
+    speed: 52,
     par: 120,
     briefing:
-      "Enciende tres runas lunares. Los círculos azules anuncian el pulso de los espíritus.",
+      "Enciende tres runas lunares. Los cuadros azules anuncian el pulso de los espíritus.",
     runes: [
       [5, 2],
       [9, 11],
@@ -86,14 +86,14 @@ export const CHALLENGES = [
     ],
   },
   {
-    speed: 33,
+    speed: 54,
     par: 140,
     extraBridges: [
       [6, 4],
       [12, 3],
     ],
     briefing:
-      "Despierta las tres runas del santuario. El Guardián Solar prepara un gran golpe: sal del círculo.",
+      "Despierta las tres runas del santuario. El Guardián Solar prepara un gran golpe: sal de los cuadros marcados.",
     runes: [
       [4, 1],
       [10, 11],
@@ -133,9 +133,9 @@ export const ENEMIES = Object.freeze({
   hunter: {
     name: "Jaguar de jade",
     speed: 9,
-    reach: 2.5,
+    reach: 3.1,
     radius: 0.48,
-    windup: 0.7,
+    windup: 0.85,
     recovery: 1.55,
     color: "#f2b85c",
   },

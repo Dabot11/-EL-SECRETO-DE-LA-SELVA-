@@ -27,7 +27,7 @@
             ></span
           >
         </a>
-        <span class="edition"><i></i> PIXEL ART · AVENTURA 4.0</span>
+        <span class="edition"><i></i> PIXEL ART · AVENTURA 5.0</span>
       </header>
 
       <main>
@@ -65,9 +65,9 @@
           <canvas
             id="game-canvas"
             width="960"
-            height="600"
+            height="720"
             tabindex="0"
-            aria-label="Mapa isométrico de la misión. Jugador uno: WASD. Jugador dos: flechas. Escape para pausar."
+            aria-label="Mapa de la misión visto desde arriba, de 28 por 20 casillas. Jugador uno: WASD. Jugador dos: flechas. Escape para pausar."
             >Tu navegador necesita soporte para Canvas 2D para jugar.</canvas
           >
 
@@ -254,8 +254,10 @@
                 sus 3 intentos.
               </p>
               <p class="auto-note">
-                Los arbustos ocultan. Las zonas iluminadas avisan de ataques.
-                Muévete + impulso para esquivar. Los 3 tesoros son opcionales.
+                Una pulsación mueve una casilla. Mantén la tecla para seguir. La
+                última dirección pulsada tiene prioridad; nunca hay diagonales.
+                Los cuadros marcados avisan de ataques. Muévete + impulso para
+                dar un paso rápido. Los 3 tesoros son opcionales.
               </p>
               <button id="close-how" class="button primary compact">
                 ¡Entendido! <span>→</span>
@@ -334,7 +336,10 @@
                 aria-hidden="true"
               ></canvas>
               <h3>Centinela de piedra</h3>
-              <p>Golpe corto y lento. Aléjate del círculo dorado.</p>
+              <p>
+                Golpe corto y lento. Sal de los cuadros dorados en forma de
+                cruz.
+              </p>
             </article>
             <article>
               <canvas
@@ -354,7 +359,9 @@
                 aria-hidden="true"
               ></canvas>
               <h3>Espíritu del río</h3>
-              <p>Su pulso azul alcanza más lejos. Busca un escondite.</p>
+              <p>
+                Su pulso azul marca varios cuadros. Sal del área o busca hojas.
+              </p>
             </article>
             <article>
               <canvas
@@ -364,7 +371,10 @@
                 aria-hidden="true"
               ></canvas>
               <h3>Guardián Solar</h3>
-              <p>Protege el último templo. Su gran golpe tarda en cargar.</p>
+              <p>
+                Protege el último templo. Su gran golpe marca un área amplia de
+                cuadros.
+              </p>
             </article>
           </div>
         </section>
@@ -399,7 +409,7 @@
         <span
           >UNA IDEA DE DAVID Y TAVITO <span class="footer-star">✦</span> HECHA
           PARA EXPLORAR</span
-        ><span>5 MISIONES <span class="footer-divider">/</span> V.4.0</span>
+        ><span>5 MISIONES <span class="footer-divider">/</span> V.5.0</span>
       </footer>
     </div>
     <script type="module" src="./src/main.js"></script>

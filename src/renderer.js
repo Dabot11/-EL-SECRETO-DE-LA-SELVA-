@@ -9,18 +9,17 @@ import { TILE, tileAt } from "./map.js";
 import { ENEMIES, trapPhase } from "./challenges.js";
 import { THEMES } from "./missions.js";
 import { drawSprite, drawArt } from "./sprites.js";
+import { renderPosition, sameTile } from "./grid.js";
+import { distance } from "./collisions.js";
+const S = CONFIG.tileWidth;
 const hash = (x, y) => {
   const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
   return n - Math.floor(n);
 };
-export function toScreen(x, y) {
-  return {
-    x: CONFIG.originX + ((x - y) * CONFIG.tileWidth) / 2,
-    y: CONFIG.originY + ((x + y) * CONFIG.tileHeight) / 2,
-  };
-}
-const W = CONFIG.tileWidth / 2,
-  H = CONFIG.tileHeight / 2;
+export const toScreen = (x, y) => ({
+  x: CONFIG.originX + x * S,
+  y: CONFIG.originY + y * S,
+});
 
 export class Renderer {
   constructor(canvas) {
@@ -32,7 +31,6 @@ export class Renderer {
     this.time = 0;
     this.particles = [];
     this.palette = THEMES.jungle;
-    this.cachedMission = -1;
     this.keyArt = new Image();
     this.keyArt.src = new URL(
       "../assets/adventure-key-art.png",
@@ -41,9 +39,7 @@ export class Renderer {
     this.keyArtReady = false;
     this.keyArt
       .decode()
-      .then(() => {
-        this.keyArtReady = true;
-      })
+      .then(() => (this.keyArtReady = true))
       .catch(() => {});
   }
   rect(x, y, w, h, color) {
@@ -55,7 +51,7 @@ export class Renderer {
       Math.round(h),
     );
   }
-  poly(points, color, stroke) {
+  line(points, color, width = 1) {
     const c = this.ctx;
     c.beginPath();
     points.forEach(([x, y], i) =>
@@ -63,6 +59,14 @@ export class Renderer {
         ? c.lineTo(Math.round(x), Math.round(y))
         : c.moveTo(Math.round(x), Math.round(y)),
     );
+    c.strokeStyle = color;
+    c.lineWidth = width;
+    c.stroke();
+  }
+  poly(points, color, stroke) {
+    const c = this.ctx;
+    c.beginPath();
+    points.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
     c.closePath();
     c.fillStyle = color;
     c.fill();
@@ -84,528 +88,87 @@ export class Renderer {
       stroke,
     );
   }
-  line(points, color, width = 1) {
-    const c = this.ctx;
-    c.beginPath();
-    points.forEach(([x, y], i) =>
-      i
-        ? c.lineTo(Math.round(x), Math.round(y))
-        : c.moveTo(Math.round(x), Math.round(y)),
-    );
-    c.strokeStyle = color;
-    c.lineWidth = width;
-    c.stroke();
-  }
-  text(text, x, y, color = "#ece2af", size = 9) {
+  text(text, x, y, color = "#f4e5b3", size = 9) {
     const c = this.ctx;
     c.font = `bold ${size}px monospace`;
     c.textAlign = "center";
-    c.fillStyle = "#102c2b";
+    c.fillStyle = "#112922";
     c.fillText(text, Math.round(x) + 1, Math.round(y) + 1);
     c.fillStyle = color;
     c.fillText(text, Math.round(x), Math.round(y));
   }
-  shadow(x, y, w = 13, h = 5) {
-    this.ctx.save();
-    this.ctx.globalAlpha = 0.28;
-    this.diamond(x, y, w, h, "#10241e");
-    this.ctx.restore();
+  bar(x, y, t, color = "#a6edcc", width = 25) {
+    this.rect(x - width / 2 - 1, y - 1, width + 2, 5, "#122e2b");
+    this.rect(x - width / 2, y, width, 3, "#50655c");
+    this.rect(x - width / 2, y, width * Math.max(0, Math.min(1, t)), 3, color);
   }
-  leaf(x, y, size, color, flip = 1) {
-    this.poly(
-      [
-        [x, y],
-        [x + flip * size * 0.2, y - size * 0.65],
-        [x + flip * size * 0.6, y - size],
-        [x + flip * size, y - size * 0.7],
-        [x + flip * size * 0.7, y - size * 0.2],
-      ],
-      color,
-    );
-    this.line(
-      [
-        [x, y],
-        [x + flip * size * 0.7, y - size * 0.7],
-      ],
-      "#72984c",
-    );
-  }
-  fern(x, y, seed = 0, scale = 1) {
-    for (let i = 0; i < 5; i++) {
-      const side = i % 2 ? -1 : 1;
-      this.leaf(
-        x,
-        y,
-        scale * (9 + (i % 3) * 4),
-        ["#28553b", "#497c43", "#648c46"][i % 3],
-        side,
-      );
-      x += side * 2;
-      y -= 2;
-    }
-    if (seed > 0.7) {
-      this.rect(x + 3, y + 2, 3, 5, "#bc674b");
-      this.rect(x + 3, y, 3, 2, "#e4a058");
-    }
-  }
-  foliage(x, y, seed, scale = 1) {
+  shadow(x, y, w = 12) {
     const c = this.ctx;
-    c.save();
-    c.translate(x, y);
-    c.scale(scale, scale);
-    this.rect(-4, -35, 8, 40, "#3c4930");
-    this.rect(-2, -32, 3, 38, "#6b6944");
-    for (let i = 0; i < 9; i++) {
-      const angle = i * 2.4,
-        rx = Math.cos(angle) * 24,
-        ry = -43 + Math.sin(angle) * 15;
-      this.poly(
-        [
-          [rx - 16, ry],
-          [rx - 19, ry - 8],
-          [rx - 12, ry - 17],
-          [rx - 2, ry - 21],
-          [rx + 9, ry - 18],
-          [rx + 17, ry - 9],
-          [rx + 15, ry + 1],
-          [rx + 4, ry + 7],
-        ],
-        ["#183e2e", "#285b36", "#386c3b"][i % 3],
-      );
-      for (let k = 0; k < 10; k++) {
-        const xx = rx - 12 + hash(i * 10 + k, seed) * 25,
-          yy = ry - 15 + hash(k, seed + i) * 19;
-        this.rect(
-          xx,
-          yy,
-          3 + (k % 3),
-          2,
-          ["#628d48", "#42753c", "#7a9d4e"][k % 3],
-        );
-      }
-    }
-    c.restore();
+    c.fillStyle = "#10251c50";
+    c.beginPath();
+    c.ellipse(x, y, w, 5, 0, 0, Math.PI * 2);
+    c.fill();
   }
-  bush(x, y, seed = 0, active = false) {
-    this.shadow(x, y, 20, 7);
-    const sway = active ? Math.round(Math.sin(this.time * 9)) : 0;
-    if (!drawArt(this.ctx, 7, x + sway, y + 3, 29)) {
-      for (let i = 0; i < 5; i++) this.fern(x - 12 + i * 6, y - 4, seed, 1.15);
-    }
-    if (active) {
-      for (let i = 0; i < 3; i++)
-        this.rect(
-          x - 8 + i * 7 + Math.sin(this.time * 8 + i) * 2,
-          y - 25 - (i % 2) * 5,
-          3,
-          2,
-          "#b1cd69",
-        );
-    }
+  cell(point, color, alpha = 0.2) {
+    const s = toScreen(Math.floor(point.x), Math.floor(point.y)),
+      c = this.ctx;
+    c.save();
+    c.globalAlpha = alpha;
+    this.rect(s.x + 1, s.y + 1, S - 2, S - 2, color);
+    c.restore();
+    c.strokeStyle = color;
+    c.lineWidth = 1;
+    c.strokeRect(s.x + 1.5, s.y + 1.5, S - 3, S - 3);
   }
   rune(x, y, color) {
-    this.line(
-      [
-        [x - 3, y - 5],
-        [x + 3, y - 5],
-        [x + 5, y],
-        [x, y + 5],
-        [x - 5, y],
-        [x - 3, y - 5],
-      ],
-      color,
-    );
-    this.rect(x - 1, y - 2, 2, 4, color);
-  }
-  wall(x, y, seed, border = false, back = false) {
-    const p = this.palette,
-      h = border ? (back ? 32 : 15) : 25;
-    this.poly(
-      [
-        [x - W, y],
-        [x, y + H],
-        [x, y + H - h],
-        [x - W, y - h],
-      ],
-      p.stone,
-    );
-    this.poly(
-      [
-        [x, y + H],
-        [x + W, y],
-        [x + W, y - h],
-        [x, y + H - h],
-      ],
-      p.shadow,
-    );
-    for (let level = 7; level < h; level += 8) {
-      this.line(
-        [
-          [x - W, y - level],
-          [x, y + H - level],
-          [x + W, y - level],
-        ],
-        p.line,
-      );
-      this.line(
-        [
-          [x - W / 2, y + H / 2 - level],
-          [x - W / 2, y + H / 2 - level - 7],
-        ],
-        p.line,
-      );
-      this.line(
-        [
-          [x + W / 2, y + H / 2 - level],
-          [x + W / 2, y + H / 2 - level - 7],
-        ],
-        p.line,
-      );
-    }
-    this.diamond(x, y - h, W, H, p.light, p.stone);
-    this.diamond(x, y - h, W - 3, H - 2, p.stone);
-    this.poly(
-      [
-        [x - 21, y - h],
-        [x - 10, y - h - 5],
-        [x - 1, y - h - 1],
-        [x - 6, y - h + 4],
-      ],
-      p.light,
-    );
-    for (let i = 0; i < 9; i++) {
-      const xx = x - 16 + hash(i, seed) * 30,
-        yy = y - h + 3 + hash(i + 3, seed) * 10;
-      this.rect(xx, yy, 2, 1, i % 2 ? p.light : p.shadow);
-    }
-    if (seed > 0.25) {
-      this.poly(
-        [
-          [x - 22, y - h],
-          [x - 15, y - h - 4],
-          [x - 8, y - h - 3],
-          [x - 9, y - h + 3],
-          [x - 15, y - h + 5],
-        ],
-        "#587a3c",
-      );
-      for (let i = 0; i < 4; i++) {
-        this.rect(x - 18 + i * 3, y - h - 2 + (i % 2) * 3, 3, 2, "#93a855");
-        this.rect(x - 16 + i * 3, y - h + 4 + i * 3, 2, 4, "#3e6538");
-      }
-    }
-    if (seed > 0.7 && !border) this.rune(x + 11, y + 5 - h / 2, "#96b994");
-    if (back && seed > 0.82) this.column(x, y, 44);
-  }
-  column(x, y, height = 45) {
-    const p = this.palette;
-    this.shadow(x, y, 14, 6);
-    this.diamond(x, y, 16, 8, p.shadow);
-    this.poly(
-      [
-        [x - 8, y - 4],
-        [x, y],
-        [x, y - height],
-        [x - 8, y - height - 4],
-      ],
-      p.stone,
-    );
-    this.poly(
-      [
-        [x, y],
-        [x + 8, y - 4],
-        [x + 8, y - height - 4],
-        [x, y - height],
-      ],
-      p.shadow,
-    );
-    for (let k = 10; k < height; k += 9)
-      this.line(
-        [
-          [x - 8, y - k - 4],
-          [x, y - k],
-          [x + 8, y - k - 4],
-        ],
-        p.line,
-      );
-    this.diamond(x, y - height - 4, 12, 6, p.light);
-    this.diamond(x, y - height - 6, 9, 4, p.stone);
-    this.line(
-      [
-        [x - 5, y - height + 4],
-        [x - 5, y - 9],
-      ],
-      p.light,
-    );
-    this.rune(x + 3, y - height + 17, p.accent);
-  }
-  torch(x, y) {
-    this.shadow(x, y, 5, 2);
-    this.rect(x - 3, y - 20, 6, 20, "#705839");
-    this.rect(x - 4, y - 23, 8, 5, "#c5a46b");
-    const f = Math.round(Math.sin(this.time * 14 + x) * 2);
-    this.poly(
-      [
-        [x - 4, y - 24],
-        [x - 4, y - 29],
-        [x, y - 37 - f],
-        [x + 4, y - 28],
-        [x + 3, y - 23],
-      ],
-      "#e99439",
-    );
-    this.poly(
-      [
-        [x - 2, y - 24],
-        [x - 1, y - 31 - f],
-        [x + 2, y - 28],
-        [x + 2, y - 24],
-      ],
-      "#fff0a6",
-    );
-    this.rect(x - 1, y - 28, 2, 3, "#fff7cf");
+    this.diamond(x, y, 5, 7, color);
+    this.rect(x - 1, y - 3, 2, 6, "#244a40");
   }
   flag(x, y, small = false) {
-    // A jade sun idol distinguishes the shared mission relic from optional gold gems.
     const c = this.ctx;
     c.save();
     c.translate(x, y);
-    if (small) c.scale(0.7, 0.7);
-    this.diamond(0, -20, 14, 17, "#e3ba61", "#ffebad");
-    this.diamond(0, -20, 9, 12, "#248a78", "#9af1cb");
-    this.rect(-5, -24, 3, 3, "#f9e2a2");
-    this.rect(2, -24, 3, 3, "#f9e2a2");
-    this.rect(-3, -16, 6, 2, "#f9e2a2");
-    this.rect(-11, -5, 22, 4, "#c3944d");
-    this.rect(-8, -2, 16, 3, "#f7d685");
+    if (small) c.scale(0.65, 0.65);
+    this.diamond(0, -13, 10, 12, "#edc66e", "#fff1b9");
+    this.diamond(0, -13, 6, 8, "#248b74", "#a3f3c7");
+    this.rect(-4, -16, 2, 2, "#fff0b4");
+    this.rect(2, -16, 2, 2, "#fff0b4");
+    this.rect(-7, -2, 14, 3, "#ebc56e");
     c.restore();
   }
-  bridgeObject(bridge, statue, solo) {
-    const item = statue ? bridge.statue : bridge.winch,
-      s = toScreen(item.x, item.y);
-    const color = statue
-      ? bridge.charged
-        ? "#f6d57f"
-        : "#95c1b1"
-      : bridge.litTime > 0 || bridge.open
-        ? "#adf4d1"
-        : "#6c9b92";
-    this.shadow(s.x, s.y, 20, 7);
-    this.diamond(s.x, s.y, 22, 11, "#2b5e52", color);
-    if (statue) {
-      this.rect(s.x - 12, s.y - 31, 24, 27, "#537a67");
-      this.rect(s.x - 15, s.y - 39, 9, 12, "#749880");
-      this.rect(s.x + 6, s.y - 39, 9, 12, "#749880");
-      this.rect(s.x - 16, s.y - 30, 32, 20, "#749880");
-      this.rect(s.x - 12, s.y - 25, 7, 5, color);
-      this.rect(s.x + 5, s.y - 25, 7, 5, color);
-      this.diamond(s.x, s.y - 16, 5, 4, "#1a4039");
-      this.rect(s.x - 9, s.y - 9, 18, 4, color);
-      this.text(
-        bridge.charged ? "✓ CARGADA" : "ESTATUA",
-        s.x,
-        s.y - 48,
-        color,
-        8,
-      );
-    } else {
-      this.rect(s.x - 12, s.y - 17, 24, 15, "#876542");
-      this.rect(s.x - 15, s.y - 20, 30, 5, "#c59f6d");
-      this.line(
-        [
-          [s.x - 13, s.y - 32],
-          [s.x + 13, s.y - 10],
-        ],
-        color,
-        3,
-      );
-      this.line(
-        [
-          [s.x + 13, s.y - 32],
-          [s.x - 13, s.y - 10],
-        ],
-        color,
-        3,
-      );
-      this.diamond(s.x, s.y - 21, 5, 5, "#dfcd8c", color);
-      this.text(
-        bridge.open
-          ? "✓ ABIERTO"
-          : bridge.litTime > 0
-            ? solo
-              ? "Q · TIRAR"
-              : "ENTER · TIRAR"
-            : "E · ILUMINAR",
-        s.x,
-        s.y - 42,
-        color,
-        8,
-      );
-      if (bridge.litTime > 0 && !bridge.open)
-        this.bar(s.x, s.y + 8, bridge.litTime / (solo ? 8 : 4), color, 38);
-    }
-  }
-  pedestal(x, y, hasFlag, locked = false) {
+  wall(x, y, seed) {
     const p = this.palette;
-    this.shadow(x, y, 26, 10);
-    for (let i = 0; i < 3; i++) {
-      this.diamond(x, y - i * 4, 26 - i * 4, 13 - i * 2, p.shadow);
-      this.diamond(x, y - i * 4 - 3, 26 - i * 4, 13 - i * 2, p.light);
+    this.rect(x, y, S, S, p.shadow);
+    this.rect(x + 1, y + 1, S - 2, S - 7, p.stone);
+    this.rect(x + 2, y + 2, S - 4, 2, p.light);
+    this.rect(x + 2, y + S - 7, S - 3, 3, p.line);
+    this.line(
+      [
+        [x + 1, y + 11],
+        [x + S - 2, y + 11],
+      ],
+      p.shadow,
+    );
+    this.line(
+      [
+        [x + 9, y + 2],
+        [x + 9, y + 10],
+      ],
+      p.shadow,
+    );
+    this.line(
+      [
+        [x + 19, y + 12],
+        [x + 19, y + S - 7],
+      ],
+      p.shadow,
+    );
+    if (seed > 0.5) {
+      this.rect(x + 2, y + 3, 5, 3, "#617d48");
+      this.rect(x + 4, y + 5, 8, 2, "#738a4e");
     }
-    this.diamond(x, y - 15, 15, 7, p.stone);
-    this.rune(x, y - 15, p.accent);
-    if (hasFlag) {
-      this.flag(x, y - 17);
-      this.text(
-        locked ? "SELLADA" : "RELIQUIA",
-        x + 6,
-        y - 66,
-        locked ? "#96efe0" : "#f5dc96",
-        8,
-      );
-      if (locked) {
-        this.ctx.save();
-        this.ctx.globalAlpha = 0.6;
-        this.diamond(x + 8, y - 35, 22, 25, "#153c3a88", "#9dedd4");
-        this.ctx.restore();
-      }
-    }
-  }
-  floor(map) {
-    const p = this.palette;
-    for (let y = 0; y < map.height; y++)
-      for (let x = 0; x < map.width; x++) {
-        const s = toScreen(x + 0.5, y + 0.5),
-          t = tileAt(map, x, y),
-          seed = hash(x, y);
-        if (x === 17 || y === 13) {
-          this.poly(
-            [
-              [s.x - W, s.y],
-              [s.x, s.y + H],
-              [s.x + W, s.y],
-              [s.x + W, s.y + 16],
-              [s.x, s.y + H + 20],
-              [s.x - W, s.y + 16],
-            ],
-            p.shadow,
-          );
-          for (let k = 0; k < 4; k++)
-            this.rect(s.x - 15 + k * 9, s.y + 13 + (k % 2) * 3, 5, 3, p.line);
-        }
-        if (t === TILE.WATER) {
-          this.diamond(s.x, s.y, W, H, p.water, p.waterLight);
-          continue;
-        }
-        this.diamond(
-          s.x,
-          s.y,
-          W,
-          H,
-          t === TILE.BASE ? p.light : p.ground[Math.floor(seed * 4)],
-          p.line,
-        );
-        this.line(
-          [
-            [s.x - W + 2, s.y],
-            [s.x, s.y - H + 1],
-            [s.x + W - 2, s.y],
-          ],
-          p.light,
-        );
-        this.line(
-          [
-            [s.x, s.y - H],
-            [s.x - 1, s.y + H],
-          ],
-          p.line,
-        );
-        this.line(
-          [
-            [s.x - W / 2, s.y - H / 2],
-            [s.x + W / 2, s.y + H / 2],
-          ],
-          p.line,
-        );
-        for (let k = 0; k < 10; k++) {
-          const rx = (hash(x * 11 + k, y) - 0.5) * 35,
-            ry = (hash(x, y * 17 + k) - 0.5) * 15;
-          if (Math.abs(rx) / W + Math.abs(ry) / H < 0.85)
-            this.rect(
-              s.x + rx,
-              s.y + ry,
-              1 + (k % 2),
-              1,
-              k % 3 ? p.ground[(k + 1) % 4] : p.light,
-            );
-        }
-        if (seed > 0.56 && t !== TILE.BASE) {
-          this.line(
-            [
-              [s.x + 5, s.y - 5],
-              [s.x + 3, s.y - 1],
-              [s.x + 7, s.y + 1],
-              [s.x + 5, s.y + 4],
-            ],
-            p.line,
-          );
-          this.rect(s.x - 17, s.y - 1, 5, 2, "#6b8850");
-          this.rect(s.x - 15, s.y + 1, 3, 2, "#7e9556");
-        }
-        if (t === TILE.BRIDGE) {
-          this.diamond(s.x, s.y - 1, W, H, "#b8925a", "#e0ba76");
-          for (let k = -3; k <= 3; k++)
-            this.line(
-              [
-                [s.x - 19 + k * 3, s.y - 1 - k * 1.5],
-                [s.x - 1 + k * 3, s.y + 8 - k * 1.5],
-              ],
-              "#6c5339",
-              2,
-            );
-          this.line(
-            [
-              [s.x - 22, s.y - 3],
-              [s.x, s.y - 14],
-              [s.x + 22, s.y - 3],
-            ],
-            "#d7b282",
-            2,
-          );
-          for (const dx of [-20, 20]) {
-            this.rect(s.x + dx, s.y - 12, 3, 12, "#856443");
-            this.rect(s.x + dx - 1, s.y - 14, 5, 3, "#c8a875");
-          }
-        }
-      }
-    const base = toScreen(map.base.x, map.base.y);
-    this.diamond(base.x, base.y, 33, 17, p.stone, p.accent);
-    this.diamond(base.x, base.y, 27, 13, p.ground[0], p.accent);
-    this.rune(base.x, base.y, p.accent);
-  }
-  scenery(map) {
-    const c = this.ctx;
-    c.save();
-    for (let i = 0; i < 52; i++) {
-      let x, y;
-      if (i < 18) {
-        x = i - 1;
-        y = -1.7;
-      } else if (i < 32) {
-        x = -1.8;
-        y = i - 18;
-      } else if (i < 44) {
-        x = 19;
-        y = i - 32;
-      } else {
-        x = (i - 44) * 2;
-        y = 15.2;
-      }
-      const s = toScreen(x, y);
-      c.globalAlpha = i > 31 ? 0.48 : 0.8;
-      this.foliage(s.x, s.y, hash(i, 5), 0.85 + hash(i, 4) * 0.45);
-    }
-    c.restore();
+    this.rect(x + 4, y + 15, 2, 2, p.light);
+    this.rect(x + 22, y + 6, 2, 2, p.light);
   }
   cacheFloor(map) {
     const previous = this.ctx;
@@ -613,310 +176,308 @@ export class Renderer {
     this.groundLayer.width = CONFIG.width;
     this.groundLayer.height = CONFIG.height;
     this.ctx = this.groundLayer.getContext("2d");
-    this.rect(0, 0, CONFIG.width, CONFIG.height, this.palette.bg);
-    this.scenery(map);
-    this.floor(map);
+    this.ctx.imageSmoothingEnabled = false;
+    const p = this.palette;
+    this.rect(0, 0, CONFIG.width, CONFIG.height, p.bg);
+    // Dark foliage frames the map without covering its square walkable cells.
+    for (let i = 0; i < 140; i++) {
+      const horizontal = i < 80,
+        x = horizontal ? 54 + hash(i, 4) * 850 : i % 2 ? 60 : 900,
+        y = horizontal ? (i % 2 ? 68 : 661) : 90 + hash(i, 6) * 550;
+      this.rect(
+        x,
+        y,
+        9 + hash(i, 3) * 16,
+        5 + hash(i, 2) * 8,
+        ["#193f31", "#254a33", "#33583b"][i % 3],
+      );
+      this.rect(x + 4, y + 2, 6, 2, "#527747");
+    }
+    this.rect(
+      CONFIG.originX - 5,
+      CONFIG.originY - 5,
+      map.width * S + 10,
+      map.height * S + 10,
+      "#091f1b",
+    );
+    for (let y = 0; y < map.height; y++)
+      for (let x = 0; x < map.width; x++) {
+        const t = tileAt(map, x, y),
+          s = toScreen(x, y),
+          seed = hash(x, y);
+        if (t === TILE.WALL) {
+          this.wall(s.x, s.y, seed);
+          continue;
+        }
+        this.rect(
+          s.x,
+          s.y,
+          S,
+          S,
+          t === TILE.WATER ? p.water : p.ground[Math.floor(seed * 4)],
+        );
+        if (t === TILE.WATER) {
+          this.rect(s.x + 1, s.y + 1, S - 2, 1, p.waterLight + "60");
+          this.rect(s.x, s.y, S, 1, p.line);
+          continue;
+        }
+        // Equal square edges and small stone chips make the movement grid explicit.
+        this.rect(s.x, s.y, S, 1, p.line);
+        this.rect(s.x, s.y, 1, S, p.line);
+        this.rect(s.x + 2, s.y + 2, S - 4, 1, p.light + "b0");
+        this.rect(s.x + S - 2, s.y + 2, 1, S - 4, p.shadow + "80");
+        this.rect(s.x + 2, s.y + S - 2, S - 3, 1, p.shadow + "80");
+        for (let k = 0; k < 4; k++)
+          this.rect(
+            s.x + 4 + hash(x + k, y) * 19,
+            s.y + 4 + hash(x, y + k) * 19,
+            2,
+            1,
+            k % 2 ? p.line : p.light,
+          );
+        if (t === TILE.BRIDGE) {
+          this.rect(s.x + 1, s.y + 1, S - 2, S - 2, "#987349");
+          for (let k = 2; k < S; k += 6) {
+            this.rect(s.x + 2, s.y + k, S - 4, 4, "#c39b63");
+            this.rect(s.x + 3, s.y + k, 1, 2, "#eed2a0");
+          }
+          this.rect(s.x + 1, s.y + 1, 2, S - 2, "#e1bb80");
+          this.rect(s.x + S - 3, s.y + 1, 2, S - 2, "#e1bb80");
+        }
+        if (t === TILE.BASE) {
+          this.rect(s.x + 2, s.y + 2, S - 4, S - 4, "#375d4b30");
+          if (x % 2 === 0 && y % 2 === 0)
+            this.rect(s.x + 13, s.y + 13, 2, 2, "#a7d5aa");
+        }
+      }
+    const b = toScreen(map.base.x, map.base.y);
+    this.rect(b.x - 12, b.y - 12, 24, 24, "#244e40");
+    this.ctx.strokeStyle = "#b6d19b";
+    this.ctx.strokeRect(b.x - 11.5, b.y - 11.5, 23, 23);
+    this.rune(b.x, b.y, "#d6e4ad");
     this.ctx = previous;
     this.cachedMap = map;
     this.cachedRevision = map.revision;
   }
   water(map) {
-    for (let y = 1; y < 13; y++)
-      for (let x = 1; x < 17; x++)
+    for (let y = 0; y < map.height; y++)
+      for (let x = 0; x < map.width; x++)
         if (tileAt(map, x, y) === TILE.WATER) {
-          const s = toScreen(x + 0.5, y + 0.5);
-          for (let k = 0; k < 6; k++) {
-            const xx =
-                s.x -
-                15 +
-                (k % 3) * 11 +
-                Math.round(Math.sin(this.time * 2 + y + k) * 3),
-              yy = s.y - 5 + Math.floor(k / 3) * 6;
+          const s = toScreen(x, y);
+          for (let k = 0; k < 3; k++) {
+            const dx = 3 + ((hash(x + k, y) * 17 + this.time * 2) % 18);
             this.rect(
-              xx,
-              yy,
-              3 + (k % 3),
+              s.x + dx,
+              s.y + 6 + k * 7,
+              5,
               1,
-              k % 2 ? this.palette.waterLight : "#439f9e",
+              this.palette.waterLight + "80",
             );
-          }
-          if (hash(x, y) > 0.7) {
-            this.diamond(s.x + 4, s.y + 3, 4, 2, "#609c62");
-            this.rect(s.x + 4, s.y, 2, 2, "#d4d7a4");
-          }
-          if (y === 12 || x === 16) {
-            for (let k = 0; k < 6; k++) {
-              const xx = s.x - 11 + k * 4,
-                height = 18 + (k % 2) * 4;
-              this.rect(xx, s.y + 7, 3, height, this.palette.water);
-              this.rect(
-                xx,
-                s.y + 7 + ((this.time * 24 + k * 3) % 15),
-                2,
-                6,
-                this.palette.waterLight,
-              );
-            }
           }
         }
   }
-  bar(x, y, progress, color = "#9ce6cf", width = 30) {
-    this.rect(x - width / 2 - 1, y - 1, width + 2, 5, "#092922");
-    this.rect(x - width / 2, y, width, 3, "#45604c");
-    this.rect(
-      x - width / 2,
-      y,
-      width * Math.max(0, Math.min(1, progress)),
-      3,
-      color,
-    );
-  }
-  zone(point, radius, color, fill = true) {
-    const s = toScreen(point.x, point.y),
-      c = this.ctx;
-    c.save();
-    c.beginPath();
-    c.ellipse(
-      s.x,
-      s.y,
-      W * Math.SQRT2 * radius,
-      H * Math.SQRT2 * radius,
-      0,
-      0,
-      Math.PI * 2,
-    );
-    c.strokeStyle = color;
-    c.lineWidth = 2;
-    if (fill) {
-      c.fillStyle = color + "30";
-      c.fill();
-    }
-    c.stroke();
-    c.restore();
-  }
   signals(game) {
-    this.zone(game.map.base, CONFIG.safeRadius, "#8fcab1", false);
-    if (game.bridge && !game.bridge.open) {
-      const b = game.bridge;
-      this.zone(
-        b.charged ? b.winch : b.statue,
-        0.85,
-        b.charged ? "#9feaca" : "#f2bb6d",
-        false,
-      );
-      for (const [x, y] of b.tiles) {
-        const s = toScreen(x + 0.5, y + 0.5);
-        this.text("◇", s.x, s.y - 3, "#b4dfc9", 18);
-      }
-    }
-    for (const p of game.players)
-      if (p.lightFlash > 0)
-        this.zone(p, CONFIG.lightRange * (1 - p.lightFlash / 0.5), "#fcdf92");
     for (const trap of game.traps) {
       const phase = trapPhase(trap, game.time),
-        s = toScreen(trap.x, trap.y),
-        color =
+        c =
           phase === "active"
-            ? "#f3a368"
+            ? "#f09a63"
             : phase === "warning"
-              ? "#f4d58a"
-              : "#75999a";
-      this.zone(trap, 0.62, color, phase !== "idle");
+              ? "#ffe09b"
+              : "#779d9c";
+      this.cell(trap, c, phase === "idle" ? 0.06 : 0.3);
+      const p = toScreen(trap.x, trap.y);
       this.text(
         phase === "active" ? "≈" : phase === "warning" ? "!" : "·",
-        s.x,
-        s.y + 3,
-        color,
-        14,
+        p.x,
+        p.y + 4,
+        c,
+        13,
       );
     }
-    for (const guard of game.guards) {
-      if (
-        !guard.attack ||
-        ![GuardState.WINDUP, GuardState.LUNGE].includes(guard.state)
-      )
-        continue;
-      const a = guard.attack,
-        s = toScreen(a.origin.x, a.origin.y),
-        color = ENEMIES[guard.type].color;
-      if (guard.type === "hunter") {
-        const b = toScreen(a.end.x, a.end.y);
-        const dx = a.end.x - a.origin.x,
-          dy = a.end.y - a.origin.y,
-          length = Math.hypot(dx, dy) || 1;
-        const nx = (-dy / length) * a.radius,
-          ny = (dx / length) * a.radius;
-        const corners = [
-          [a.origin.x + nx, a.origin.y + ny],
-          [a.end.x + nx, a.end.y + ny],
-          [a.end.x - nx, a.end.y - ny],
-          [a.origin.x - nx, a.origin.y - ny],
-        ].map(([x, y]) => {
-          const p = toScreen(x, y);
-          return [p.x, p.y];
-        });
-        this.poly(corners, color + "40", color);
-        this.line(
-          [
-            [s.x, s.y],
-            [b.x, b.y],
-          ],
-          color,
-          2,
-        );
-        this.diamond(b.x, b.y, 7, 4, color);
-      } else this.zone(a.origin, a.radius, color);
-      this.bar(s.x, s.y + 10, 1 - guard.attackTimer / a.duration, color, 36);
+    for (const g of game.guards)
+      if (g.attack && [GuardState.WINDUP, GuardState.LUNGE].includes(g.state)) {
+        const color = ENEMIES[g.type].color;
+        for (const cell of g.attack.cells) {
+          this.cell(
+            cell,
+            color,
+            g.state === GuardState.LUNGE
+              ? 0.55
+              : 0.22 + 0.08 * Math.sin(this.time * 14),
+          );
+          const p = toScreen(cell.x, cell.y);
+          this.text("×", p.x, p.y + 4, color, 13);
+        }
+      }
+    const b = game.bridge;
+    if (b && !b.open) {
+      this.cell(
+        b.charged ? b.winch : b.statue,
+        b.charged ? "#9ee5ce" : "#f1cf78",
+        0.16,
+      );
+      for (const [x, y] of b.tiles) {
+        const p = toScreen(x + 0.5, y + 0.5);
+        this.text("◇", p.x, p.y + 4, "#c2ebd8", 13);
+      }
+    }
+    for (const player of game.players) {
+      this.cell(player, player.id ? "#efb18d" : "#92e1f3", 0.12);
+      if (player.lightFlash > 0)
+        for (let dx = -2; dx <= 2; dx++)
+          for (let dy = -2; dy <= 2; dy++)
+            if (Math.hypot(dx, dy) <= CONFIG.lightRange)
+              this.cell(
+                { x: player.x + dx, y: player.y + dy },
+                "#ffdf8b",
+                player.lightFlash * 0.6,
+              );
     }
   }
   objectiveObject(item, isRune) {
-    const s = toScreen(item.x, item.y),
-      c = isRune ? (item.active ? "#b5f5c6" : "#7fe2de") : "#f5ce76";
-    this.shadow(s.x, s.y, 14, 5);
+    const p = toScreen(item.x, item.y),
+      c = isRune ? (item.active ? "#c5f5bb" : "#94e4db") : "#ffdc8f";
+    this.shadow(p.x, p.y + 5, 9);
     if (isRune) {
-      this.diamond(s.x, s.y, 17, 8, "#294c40", c);
-      this.poly(
-        [
-          [s.x - 7, s.y - 4],
-          [s.x - 7, s.y - 24],
-          [s.x, s.y - 30],
-          [s.x + 7, s.y - 24],
-          [s.x + 7, s.y - 4],
-          [s.x, s.y],
-        ],
-        item.active ? "#4c9c78" : "#325f59",
-        c,
-      );
-      this.rune(s.x, s.y - 17, c);
-      this.text(item.active ? "✓" : `R${item.id + 1}`, s.x, s.y - 37, c, 9);
+      this.rect(p.x - 9, p.y - 13, 18, 22, "#2c6556");
+      this.rect(p.x - 8, p.y - 13, 16, 2, c);
+      this.rune(p.x, p.y - 3, c);
+      this.text(item.active ? "✓" : `R${item.id + 1}`, p.x, p.y - 19, c, 8);
       if (item.progress > 0 && !item.active)
-        this.bar(s.x, s.y + 7, item.progress / CONFIG.runeTime, c);
+        this.bar(p.x, p.y + 10, item.progress / CONFIG.runeTime, c);
     } else {
       const bob = Math.sin(this.time * 3 + item.id) * 2;
-      this.diamond(s.x, s.y - 13 + bob, 7, 11, c, "#fff1b2");
+      this.diamond(p.x, p.y - 5 + bob, 5, 8, c, "#fff4c1");
+      this.text("✦", p.x, p.y - 18 + bob, c, 8);
+    }
+  }
+  bridgeObject(bridge, statue, solo) {
+    const item = statue ? bridge.statue : bridge.winch,
+      p = toScreen(item.x, item.y),
+      color = statue
+        ? bridge.charged
+          ? "#f7dc8b"
+          : "#b2d8c0"
+        : bridge.litTime > 0 || bridge.open
+          ? "#aef5cf"
+          : "#d4ba89";
+    this.shadow(p.x, p.y + 7, 12);
+    if (statue) {
+      this.rect(p.x - 11, p.y - 10, 22, 18, "#538b72");
+      this.rect(p.x - 11, p.y - 17, 6, 9, "#86b29b");
+      this.rect(p.x + 5, p.y - 17, 6, 9, "#86b29b");
+      this.rect(p.x - 8, p.y - 6, 5, 3, color);
+      this.rect(p.x + 3, p.y - 6, 5, 3, color);
+      this.diamond(p.x, p.y + 1, 3, 3, "#173b32");
+      this.rect(p.x - 9, p.y + 8, 18, 3, color);
+      this.text(
+        bridge.charged ? "✓ CARGADA" : "ESTATUA",
+        p.x,
+        p.y - 23,
+        color,
+        8,
+      );
+    } else {
+      this.rect(p.x - 9, p.y - 7, 18, 17, "#77593f");
+      this.rect(p.x - 12, p.y + 6, 24, 4, "#c7a06c");
       this.line(
         [
-          [s.x, s.y - 24 + bob],
-          [s.x, s.y - 2 + bob],
+          [p.x - 9, p.y - 12],
+          [p.x + 9, p.y + 4],
         ],
-        "#fff6d1",
+        color,
+        3,
       );
-      this.text("✦", s.x, s.y - 31 + bob, c, 10);
+      this.line(
+        [
+          [p.x + 9, p.y - 12],
+          [p.x - 9, p.y + 4],
+        ],
+        color,
+        3,
+      );
+      this.diamond(p.x, p.y - 4, 4, 4, "#e9d49e");
+      this.text(
+        bridge.open
+          ? "✓ ABIERTO"
+          : bridge.litTime > 0
+            ? solo
+              ? "Q · TIRAR"
+              : "ENTER · TIRAR"
+            : "E · LUZ",
+        p.x,
+        p.y - 20,
+        color,
+        8,
+      );
+      if (bridge.litTime > 0 && !bridge.open)
+        this.bar(p.x, p.y + 13, bridge.litTime / (solo ? 8 : 4), color);
     }
   }
   player(p, game) {
-    const s = toScreen(p.x, p.y),
+    const pos = renderPosition(p),
+      s = toScreen(pos.x, pos.y),
       c = this.ctx,
-      hidden = p.state === PlayerState.HIDDEN,
-      captured = p.state === PlayerState.CAPTURED;
-    const celebrating = [
-      GameState.VICTORY,
-      GameState.MISSION_COMPLETE,
-    ].includes(game.state);
-    const bob = celebrating
-      ? -Math.abs(Math.sin(this.time * 6 + p.id)) * 6
-      : p.moving
-        ? Math.round(Math.sin(this.time * 13))
-        : Math.sin(this.time * 2 + p.id) > 0.5
-          ? -1
-          : 0;
-    if (p.dashTime > 0) {
-      this.ctx.save();
-      this.ctx.globalAlpha = 0.45;
-      this.line(
-        [
-          [s.x - p.dashVector.x * 25, s.y - p.dashVector.y * 25 - 12],
-          [s.x, s.y - 12],
-        ],
-        p.id ? "#ffc4a1" : "#a0eeff",
-        10,
-      );
-      this.ctx.restore();
-    }
-    if (p.slowTime > 0) this.zone(p, 0.35, "#d5a5e9");
-    this.shadow(s.x, s.y, 11, 4);
+      captured = p.state === PlayerState.CAPTURED,
+      hidden = p.state === PlayerState.HIDDEN;
+    if (game.players.some((other) => other !== p && sameTile(other, p)))
+      s.x += p.id === 0 ? -5 : 5;
+    this.shadow(s.x, s.y + 7, 10);
     c.save();
-    if (hidden) c.globalAlpha = 0.38;
-    drawSprite(c, "explorer", s.x, s.y + bob, {
+    if (hidden) c.globalAlpha = 0.45;
+    drawSprite(c, "explorer", s.x, s.y + 9, {
       red: p.id === 1,
-      frame: p.moving ? Math.floor(this.time * 7) : 0,
+      scale: 1.5,
+      frame: p.moving ? Math.floor(this.time * 9) : 0,
       facing: p.facing,
-      scale: 1.9,
     });
     if (game.flag.carrier === p.id && !game.flag.flight)
-      this.flag(s.x + 14, s.y - 19 + bob, true);
+      this.flag(s.x + 13, s.y - 6, true);
     c.restore();
-    this.diamond(s.x, s.y + 4, 5, 2, p.id ? "#ed9676" : "#6fd3dc");
-    if (hidden) {
-      this.bush(s.x, s.y + 3, 1, true);
-      this.text("OCULTO", s.x, s.y - 46, "#d0e59a", 8);
-    }
-    if (captured || (p.protection > 0 && !hidden)) {
-      c.save();
-      c.strokeStyle = captured ? "#aaf8ff" : "#f6d590";
-      c.fillStyle = captured ? "#66bce839" : "#f6d59011";
-      c.lineWidth = 1;
+    if (captured || p.protection > 0) {
       c.beginPath();
-      c.ellipse(
-        Math.round(s.x),
-        Math.round(s.y - 23),
-        19,
-        27,
-        0,
-        0,
-        Math.PI * 2,
-      );
+      c.ellipse(s.x, s.y - 7, 15, 20, 0, 0, Math.PI * 2);
+      c.fillStyle = captured ? "#8ad6f13a" : "#ffdd8818";
       c.fill();
+      c.strokeStyle = captured ? "#b1f4fc" : "#fce3a0";
       c.stroke();
-      if (captured) {
-        this.rect(s.x - 13, s.y - 39, 3, 8, "#e6fffa");
-        this.rect(s.x - 8, s.y - 44, 5, 2, "#e6fffa");
-      }
-      c.restore();
     }
-    if (captured) {
-      this.text(
-        p.rescueProgress > 0 ? "RESCATANDO" : "¡RUEDA!",
-        s.x,
-        s.y - 56,
-        "#c9f5ee",
-        9,
-      );
-      this.bar(s.x, s.y - 52, p.rescueProgress / CONFIG.rescueTime);
-    } else if (!hidden)
-      this.text(`${p.id + 1}`, s.x, s.y - 48, p.id ? "#ffd0a3" : "#b3eeef", 10);
+    this.text(
+      hidden ? "OCULTO" : captured ? "RUEDA" : String(p.id + 1),
+      s.x,
+      s.y - 29,
+      p.id ? "#ffd1b0" : "#c0f6ff",
+      8,
+    );
+    if (captured) this.bar(s.x, s.y + 13, p.rescueProgress / CONFIG.rescueTime);
+    if (p.dashTime > 0) this.cell(p, "#fff5ce", 0.2);
   }
   guard(g) {
-    const s = toScreen(g.x, g.y),
-      float = g.type === "spirit" ? Math.sin(this.time * 3 + g.id) * 3 - 4 : 0;
-    this.shadow(s.x, s.y, g.type === "stone" ? 17 : 10, 5);
-    drawSprite(this.ctx, g.type, s.x, s.y + float, {
-      frame: g.moving ? Math.floor(this.time * 4) : 0,
+    const pos = renderPosition(g),
+      s = toScreen(pos.x, pos.y);
+    this.shadow(s.x, s.y + 7, 12);
+    drawSprite(this.ctx, g.type, s.x, s.y + 10, {
+      scale: g.type === "warden" ? 1.9 : g.type === "hunter" ? 1.1 : 1.55,
       facing: g.facing,
-      scale:
-        g.type === "warden"
-          ? 3.2
-          : g.type === "stone"
-            ? 2.4
-            : g.type === "hunter"
-              ? 1.7
-              : 1.8,
+      frame: g.moving ? Math.floor(this.time * 6) : 0,
     });
-    if (g.markedTime > 0) this.text("◇ LUZ", s.x, s.y - 74, "#ffeb9c", 8);
-    if (g.state === GuardState.STUNNED) {
-      this.text("✦ ✦", s.x, s.y - 60, "#b1f4d5", 12);
-      this.bar(s.x, s.y + 7, g.stunTime / 2.2);
-    }
-    if (g.type === "warden") this.text("SOLAR", s.x, s.y - 79, "#ffca85", 8);
-    if (g.state === GuardState.WINDUP)
-      this.text("¡!", s.x, s.y - 65, ENEMIES[g.type].color, 17);
-    else if (g.state === GuardState.RECOVER)
-      this.text("···", s.x, s.y - 60, "#a7c5ae", 12);
-    else if (g.state === GuardState.CHASE) {
-      this.rect(s.x - 6, s.y - 72, 12, 15, "#c26744");
-      this.text("!", s.x, s.y - 60, "#ffdf93", 13);
-    } else if (g.state === GuardState.SEARCH)
-      this.text("?", s.x, s.y - 63, "#ecd99c", 12);
+    if (g.state === GuardState.WINDUP) {
+      this.text("!", s.x, s.y - 29, ENEMIES[g.type].color, 13);
+      this.bar(
+        s.x,
+        s.y + 12,
+        1 - g.attackTimer / g.attack.duration,
+        ENEMIES[g.type].color,
+      );
+    } else if (g.state === GuardState.STUNNED) {
+      this.text("✦ ✦", s.x, s.y - 29, "#c7ffd7", 9);
+      this.bar(s.x, s.y + 12, g.stunTime / 2.2);
+    } else if (g.state === GuardState.RECOVER)
+      this.text("···", s.x, s.y - 29, "#d3e5c5", 10);
+    else if (g.state === GuardState.CHASE)
+      this.text("!", s.x, s.y - 29, "#ffb488", 10);
+    if (g.markedTime > 0) this.text("◇", s.x + 14, s.y - 26, "#ffec9a", 12);
   }
   consume(events) {
     for (const e of events) {
@@ -925,36 +486,24 @@ export class Renderer {
         continue;
       }
       if (e.x === undefined) continue;
-      const s = toScreen(e.x, e.y),
-        count = e.type === "victory" ? 100 : e.type === "rescue" ? 30 : 10;
-      const colors =
-        e.type === "leaves"
-          ? ["#c1db70", "#76ab53"]
-          : e.type === "rescue" || e.type === "capture"
-            ? ["#bdfaf0", "#66bde6"]
-            : ["#f3cc7b", "#8fd5bb", "#f2a275"];
-      for (let i = 0; i < count; i++) {
-        const angle = Math.random() * Math.PI * 2,
-          speed = 10 + Math.random() * 40;
+      const p = toScreen(e.x, e.y);
+      for (let i = 0; i < (e.type === "victory" ? 40 : 8); i++)
         this.particles.push({
-          x: s.x,
-          y: s.y - 24,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - 10,
-          life: 1 + Math.random(),
-          color: colors[i % colors.length],
+          x: p.x,
+          y: p.y - 8,
+          vx: (Math.random() - 0.5) * 35,
+          vy: -15 - Math.random() * 25,
+          life: 0.5 + Math.random() * 0.5,
+          color: ["#f4d38b", "#9adbc4", "#f0b096"][i % 3],
         });
-      }
     }
   }
   draw(game, dt = 1 / 60) {
     this.time += dt;
-    const c = this.ctx,
-      menu = game.state === GameState.MENU;
+    const c = this.ctx;
+    c.imageSmoothingEnabled = false;
     this.palette = THEMES[game.map.theme];
-    c.clearRect(0, 0, CONFIG.width, CONFIG.height);
-    if (menu && this.keyArtReady) {
-      // Show the chosen concept as the cover, excluding its proposal caption.
+    if (game.state === GameState.MENU && this.keyArtReady) {
       c.drawImage(
         this.keyArt,
         0,
@@ -968,8 +517,7 @@ export class Renderer {
       );
       const gradient = c.createLinearGradient(0, 0, CONFIG.width, 0);
       gradient.addColorStop(0, "#09271bed");
-      gradient.addColorStop(0.38, "#09271b9c");
-      gradient.addColorStop(0.72, "#09271b08");
+      gradient.addColorStop(0.7, "#09271b08");
       c.fillStyle = gradient;
       c.fillRect(0, 0, CONFIG.width, CONFIG.height);
     } else {
@@ -981,176 +529,111 @@ export class Renderer {
       c.drawImage(this.groundLayer, 0, 0);
       this.water(game.map);
       this.signals(game);
-      const objects = [],
-        add = (x, y, draw, offset = 0) =>
-          objects.push({ depth: x + y + offset, draw });
-      for (let y = 0; y < 14; y++)
-        for (let x = 0; x < 18; x++) {
-          const s = toScreen(x + 0.5, y + 0.5),
-            tile = tileAt(game.map, x, y),
-            seed = hash(x, y);
-          if (tile === TILE.WALL) {
-            const border = x === 0 || y === 0 || x === 17 || y === 13,
-              back = x === 0 || y === 0;
-            add(x + 0.5, y + 0.5, () => {
-              // Fade foreground masonry when an explorer is behind it; never hide a player.
-              const occludes = game.players.some((p) => {
-                const a = toScreen(p.x, p.y);
-                return (
-                  p.x + p.y < x + y + 1 &&
-                  Math.abs(a.x - s.x) < 26 &&
-                  a.y > s.y - 35 &&
-                  a.y < s.y + 8
-                );
-              });
-              c.save();
-              if (occludes) c.globalAlpha = 0.38;
-              this.wall(s.x, s.y, seed, border, back);
-              c.restore();
-            });
+      // Ground objects precede sprites, so walls and decorations never hide an explorer.
+      for (let y = 0; y < game.map.height; y++)
+        for (let x = 0; x < game.map.width; x++)
+          if (tileAt(game.map, x, y) === TILE.BUSH) {
+            const p = toScreen(x + 0.5, y + 0.5);
+            if (!drawArt(c, 7, p.x, p.y + 9, 24)) {
+              this.rect(p.x - 10, p.y - 9, 20, 20, this.palette.bush);
+            }
           }
-          if (tile === TILE.BUSH)
-            add(x + 0.5, y + 0.5, () => this.bush(s.x, s.y, seed), -0.05);
-          if (tile === TILE.WALL && seed > 0.86 && !borderTile(x, y))
-            add(x + 0.5, y + 0.5, () => this.column(s.x, s.y, 38));
-        }
       const pos = game.map.pedestal,
         s = toScreen(pos.x, pos.y);
-      add(
-        pos.x,
-        pos.y,
-        () =>
-          this.pedestal(
-            s.x,
-            s.y,
-            game.flag.state === FlagState.ON_PEDESTAL,
-            !game.sealOpen(),
-          ),
-        -0.3,
-      );
-      for (const [x, y] of [
-        [1.5, 10],
-        [3.6, 12.5],
-        [pos.x - 1, pos.y - 1],
-        [pos.x + 1, pos.y + 1],
-      ]) {
-        const p = toScreen(x, y);
-        add(x, y, () => this.torch(p.x, p.y));
+      this.rect(s.x - 13, s.y - 11, 26, 23, this.palette.shadow);
+      this.rect(s.x - 11, s.y - 12, 22, 20, this.palette.stone);
+      this.rune(s.x, s.y - 3, this.palette.accent);
+      if (game.flag.state === FlagState.ON_PEDESTAL) {
+        this.flag(s.x, s.y + 1);
+        this.text(
+          game.sealOpen() ? "RELIQUIA" : "SELLADA",
+          s.x,
+          s.y - 30,
+          "#ffe6a2",
+          8,
+        );
+        if (!game.sealOpen()) this.cell(pos, "#a3f1d1", 0.15);
       }
       if (game.flag.state === FlagState.DROPPED) {
         const p = toScreen(game.flag.x, game.flag.y);
-        add(game.flag.x, game.flag.y, () => {
-          this.diamond(p.x, p.y, 12, 5, this.palette.accent);
-          this.flag(p.x, p.y);
-        });
+        this.flag(p.x, p.y + 5);
       }
-      if (game.bridge)
-        for (const statue of [true, false]) {
-          const pos = statue ? game.bridge.statue : game.bridge.winch;
-          add(
-            pos.x,
-            pos.y,
-            () => this.bridgeObject(game.bridge, statue, game.mode === 1),
-            -0.1,
-          );
-        }
-      for (const rune of game.runes)
-        add(rune.x, rune.y, () => this.objectiveObject(rune, true));
-      for (const relic of game.relics)
-        if (!relic.collected)
-          add(relic.x, relic.y, () => this.objectiveObject(relic, false));
-      for (const guard of game.guards)
-        add(guard.x, guard.y, () => this.guard(guard));
-      for (const player of game.players)
-        add(player.x, player.y, () => this.player(player, game), 0.02);
-      objects.sort((a, b) => a.depth - b.depth);
-      objects.forEach((o) => o.draw());
-      for (const player of game.players)
-        if (player.vineFlash > 0 && player.vineTarget) {
-          const from = toScreen(player.x, player.y),
-            to = toScreen(player.vineTarget.x, player.vineTarget.y);
+      if (game.bridge) {
+        this.bridgeObject(game.bridge, true, game.mode === 1);
+        this.bridgeObject(game.bridge, false, game.mode === 1);
+      }
+      game.runes.forEach((r) => this.objectiveObject(r, true));
+      game.relics
+        .filter((r) => !r.collected)
+        .forEach((r) => this.objectiveObject(r, false));
+      const actors = [
+        ...game.guards.map((g) => ({ body: g, draw: () => this.guard(g) })),
+        ...game.players.map((p) => ({
+          body: p,
+          draw: () => this.player(p, game),
+        })),
+      ];
+      actors.sort(
+        (a, b) => renderPosition(a.body).y - renderPosition(b.body).y,
+      );
+      actors.forEach((a) => a.draw());
+      for (const p of game.players)
+        if (p.vineFlash > 0 && p.vineTarget) {
+          const from = toScreen(p.x, p.y),
+            to = toScreen(p.vineTarget.x, p.vineTarget.y);
           this.line(
             [
-              [from.x, from.y - 18],
-              [to.x, to.y - 15],
+              [from.x, from.y - 10],
+              [to.x, to.y - 8],
             ],
-            "#afd97d",
-            3,
+            "#d2e69a",
+            2,
           );
-          this.diamond(to.x, to.y - 15, 5, 4, "#e3e5a4");
         }
       if (game.flag.flight) {
         const f = game.flag.flight,
           t = 1 - f.remaining / 0.35,
-          receiver = game.players[game.flag.carrier];
-        const from = toScreen(f.from.x, f.from.y),
-          to = toScreen(receiver.x, receiver.y);
+          receiver = game.players[game.flag.carrier],
+          a = toScreen(f.from.x, f.from.y),
+          b = toScreen(receiver.x, receiver.y);
         this.flag(
-          from.x + (to.x - from.x) * t,
-          from.y + (to.y - from.y) * t - 15 - Math.sin(t * Math.PI) * 42,
+          a.x + (b.x - a.x) * t,
+          a.y + (b.y - a.y) * t - 10 - Math.sin(t * Math.PI) * 25,
           true,
         );
       }
       const base = toScreen(game.map.base.x, game.map.base.y);
       this.text(
-        game.mode === 1 && !game.alarm ? "ENTRADA · ♥ CURAR" : "ENTRADA",
-        base.x - 30,
-        base.y + 41,
-        "#f3dea3",
-        10,
+        game.mode === 1 && !game.alarm ? "ENTRADA · ♥" : "ENTRADA",
+        base.x,
+        base.y + 30,
+        "#e9e7a8",
+        8,
       );
       if (game.players[0].campProgress > 0)
         this.bar(
           base.x,
-          base.y + 14,
+          base.y + 16,
           game.players[0].campProgress / 2,
-          "#ffa99c",
-          40,
+          "#ffb19d",
         );
-      if (game.map.theme === "moon") {
-        for (const [x, y] of [
-          [1.5, 10],
-          [3.6, 12.5],
-          [pos.x - 1, pos.y - 1],
-          [pos.x + 1, pos.y + 1],
-        ]) {
-          const p = toScreen(x, y),
-            glow = c.createRadialGradient(p.x, p.y - 27, 2, p.x, p.y - 27, 42);
-          glow.addColorStop(0, "#ffd18b2a");
-          glow.addColorStop(1, "#ffd18b00");
-          c.fillStyle = glow;
-          c.fillRect(p.x - 42, p.y - 69, 84, 84);
-        }
-      }
       this.text(
-        game.map.mission.name.toUpperCase(),
-        760,
-        550,
-        this.palette.accent,
-        9,
+        "28 × 20 · CUATRO DIRECCIONES",
+        CONFIG.width / 2,
+        CONFIG.originY + game.map.height * S + 15,
+        "#9bba9b",
+        8,
       );
     }
     for (const p of this.particles) {
       p.life -= dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += 14 * dt;
-      c.globalAlpha = Math.max(0, Math.min(1, p.life));
+      p.vy += 20 * dt;
+      c.globalAlpha = Math.max(0, p.life);
       this.rect(p.x, p.y, 2, 2, p.color);
     }
     c.globalAlpha = 1;
     this.particles = this.particles.filter((p) => p.life > 0);
-    for (let i = 0; i < 18; i++) {
-      c.globalAlpha = 0.25 + 0.2 * Math.sin(this.time * 1.4 + i);
-      this.rect(
-        hash(i, 4) * CONFIG.width + Math.sin(this.time * 0.4 + i) * 9,
-        hash(i, 5) * CONFIG.height,
-        2,
-        1,
-        "#e5dc97",
-      );
-    }
-    c.globalAlpha = 1;
   }
 }
-const borderTile = (x, y) => x === 0 || y === 0 || x === 17 || y === 13;

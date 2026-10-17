@@ -127,27 +127,28 @@ test("rescatar exige permanecer cerca, se interrumpe al alejarse y protege a amb
   assert.equal(g.stats.rescues, 1);
   assert.equal(g.capture(g.players[1]), false);
 });
-test("el impulso consume recarga, protege brevemente y no atraviesa agua ni muros", () => {
+test("el impulso da exactamente un paso rápido y no permite atravesar agua", () => {
   const g = fixture(),
     p = g.players[0];
+  g.map.cells[6][7] = ".";
+  g.map.cells[6][8] = ".";
+  g.map.cells[6][9] = "~";
   place(p, { x: 7.5, y: 6.5 });
-  g.movePlayer(p, { x: 1, y: 0.5, dash: true }, 0.05);
+  g.movePlayer(p, { x: 1, y: 0, dash: true }, 0.01);
+  assert.equal(p.x, 8.5);
   assert.equal(g.stats.dashes, 1);
   assert.equal(g.capture(p), false);
-  for (let i = 0; i < 20; i++) {
-    g.update(1 / 60, [
-      { x: 1, y: 0.5, dash: true },
-      { x: 0, y: 0 },
-    ]);
-    assert.ok(canOccupy(g.map, p.x, p.y));
-  }
+  tick(g, 0.5, [
+    { x: 1, y: 0, dash: true },
+    { x: 0, y: 0 },
+  ]);
+  assert.equal(p.x, 8.5);
   assert.equal(g.stats.dashes, 1);
-  assert.ok(p.x < 8);
   assert.equal(p.dashTime, 0);
   assert.equal(g.capture(p), true);
-  const before = { x: p.x, y: p.y };
-  g.movePlayer(p, { x: 1, y: 0, dash: true }, 0.05);
-  assert.ok(distance(before, p) > 0);
+  const before = p.x;
+  g.movePlayer(p, { x: -1, y: 0, dash: true }, 0.05);
+  assert.equal(p.x, before - 1);
   assert.equal(p.dashTime, 0);
 });
 test("la pausa congela impulso, trampas, cronómetro y carga de runas", () => {

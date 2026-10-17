@@ -8,16 +8,12 @@ import {
 import { createMap, isBush, isWalkable, TILE } from "./map.js";
 import { MISSIONS } from "./missions.js";
 import { createPlayers, createGuards, createFlag } from "./entities.js";
-import {
-  distance,
-  hasLineOfSight,
-  canTravelStraight,
-  moveBody,
-  unprojectVector,
-} from "./collisions.js";
+import { distance, hasLineOfSight, canTravelStraight } from "./collisions.js";
 import { updateGuard, segmentDistance } from "./ai.js";
 import { Progress } from "./progress.js";
 import { useLight, useVine, passFlag } from "./abilities.js";
+import { stepBody, tickMotion, cardinal, centered } from "./grid.js";
+import { navigate } from "./navigation.js";
 import { trapPhase } from "./challenges.js";
 
 export class Game {
@@ -131,8 +127,13 @@ export class Game {
     this.events = [];
   }
   togglePause() {
-    if (this.state === GameState.PLAYING) this.state = GameState.PAUSED;
-    else if (this.state === GameState.PAUSED) this.state = GameState.PLAYING;
+    if (this.state === GameState.PLAYING) {
+      this.state = GameState.PAUSED;
+      for (const p of this.players) {
+        p.queuedDirection = null;
+        p.queuedDash = false;
+      }
+    } else if (this.state === GameState.PAUSED) this.state = GameState.PLAYING;
   }
   refreshPlayerStates(dt = 0) {
     for (const p of this.players) {
@@ -222,41 +223,51 @@ export class Game {
     );
   }
   movePlayer(player, input, dt) {
-    player.moving = false;
-    if (player.state === PlayerState.CAPTURED) {
-      const length = Math.hypot(input.x, input.y);
-      if (length) {
-        const d = unprojectVector(
-          (input.x / length) * CONFIG.bubbleSpeed * dt,
-          (input.y / length) * CONFIG.bubbleSpeed * dt,
-        );
-        moveBody(player, d.x, d.y, this.map);
-      }
+    tickMotion(player, dt);
+    if (input.pressed)
+      player.queuedDirection = cardinal(input.pressed.x, input.pressed.y);
+    if (input.dash) {
+      player.queuedDash = true;
+      if (!player.queuedDirection && (input.x || input.y))
+        player.queuedDirection = cardinal(input.x, input.y);
+    }
+    if (player.motion) return;
+    if (player.pullTarget) {
+      navigate(player, player.pullTarget, CONFIG.playerSpeed, 0, this.map);
+      if (
+        !player.motion ||
+        Math.abs(player.x - player.pullTarget.x) +
+          Math.abs(player.y - player.pullTarget.y) ===
+          0
+      )
+        player.pullTarget = null;
+      player.queuedDirection = null;
+      player.queuedDash = false;
       return;
     }
-    const length = Math.hypot(input.x, input.y);
-    if (input.dash && length && player.dashCooldown <= 0) {
+    const direction = player.queuedDirection ?? cardinal(input.x, input.y);
+    player.queuedDirection = null;
+    const captured = player.state === PlayerState.CAPTURED;
+    const dash = !captured && player.queuedDash && player.dashCooldown <= 0;
+    const speed = captured
+      ? CONFIG.bubbleSpeed
+      : dash
+        ? CONFIG.dashSpeed
+        : CONFIG.playerSpeed *
+          (player.slowTime > 0 ? 0.62 : 1) *
+          (this.flag.carrier === player.id
+            ? this.mode === 1
+              ? 0.93
+              : 0.78
+            : 1);
+    if (stepBody(player, direction, speed, this.map) && dash) {
       player.dashTime = CONFIG.dashDuration;
       player.dashCooldown = CONFIG.dashCooldown;
-      player.dashVector = { x: input.x / length, y: input.y / length };
+      player.dashVector = direction;
       this.stats.dashes++;
       this.emit("dash", player);
     }
-    const dashing = player.dashTime > 0;
-    if (!length && !dashing) return;
-    const direction = dashing
-      ? player.dashVector
-      : { x: input.x / length, y: input.y / length };
-    const speed = dashing
-      ? CONFIG.dashSpeed
-      : CONFIG.playerSpeed *
-        (player.slowTime > 0 ? 0.62 : 1) *
-        (this.flag.carrier === player.id ? (this.mode === 1 ? 0.93 : 0.78) : 1);
-    const delta = unprojectVector(
-      direction.x * speed * dt,
-      direction.y * speed * dt,
-    );
-    moveBody(player, delta.x, delta.y, this.map);
+    player.queuedDash = false;
   }
   collectObjectives(dt) {
     const near = (p, item, r = 0.72) =>
@@ -370,6 +381,9 @@ export class Game {
       }
       return true;
     }
+    player.queuedDirection = null;
+    player.queuedDash = false;
+    player.pullTarget = null;
     player.state = PlayerState.CAPTURED;
     player.rescueProgress = 0;
     player.dashTime = 0;
@@ -418,6 +432,7 @@ export class Game {
         if (captive.rescueProgress < CONFIG.rescueTime) continue;
         this.stats.rescues++;
         captive.rescueProgress = 0;
+        captive.pullTarget = null;
         captive.protection = CONFIG.protectionTime;
         rescuer.protection = Math.max(rescuer.protection, 0.8);
         if (rescuer.state !== PlayerState.HIDDEN)
@@ -549,8 +564,9 @@ export class Game {
   }
   assertValid() {
     return (
-      this.players.every((p) => isWalkable(this.map, p.x, p.y)) &&
-      isWalkable(this.map, this.flag.x, this.flag.y)
+      [...this.players, ...this.guards].every(
+        (p) => centered(p) && isWalkable(this.map, p.x, p.y),
+      ) && isWalkable(this.map, this.flag.x, this.flag.y)
     );
   }
 }

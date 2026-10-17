@@ -13,6 +13,10 @@ export function createPlayers(map, mode = 2) {
     rescueProgress: 0,
     moving: false,
     facing: 1,
+    motion: null,
+    queuedDirection: null,
+    queuedDash: false,
+    pullTarget: null,
     hearts: CONFIG.hearts,
     lightCooldown: 0,
     vineCooldown: 0,
@@ -34,6 +38,7 @@ export function createGuards(map, mode = 2) {
       speed:
         map.mission.speed +
         ENEMIES[map.mission.enemyTypes[id] ?? data.type].speed,
+      motion: null,
       stunTime: 0,
       markedTime: 0,
       attack: null,

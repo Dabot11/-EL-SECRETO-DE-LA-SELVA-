@@ -19,6 +19,7 @@ import {
   projectVector,
 } from "../src/collisions.js";
 import { canDetect, updateGuard } from "../src/ai.js";
+import { stepBody, tickMotion } from "../src/grid.js";
 import { playJourney } from "./journey.js";
 
 function game(mode = 2) {
@@ -31,26 +32,43 @@ function game(mode = 2) {
   return g;
 }
 function position(p, x, y) {
-  Object.assign(p, { x, y, protection: 0, state: PlayerState.NORMAL });
+  Object.assign(p, {
+    x,
+    y,
+    protection: 0,
+    state: PlayerState.NORMAL,
+    motion: null,
+  });
+}
+function openArena(g) {
+  g.map.cells = g.map.cells.map((row, y) =>
+    row.map((t, x) =>
+      x === 0 || y === 0 || x === g.map.width - 1 || y === g.map.height - 1
+        ? TILE.WALL
+        : TILE.FLOOR,
+    ),
+  );
 }
 function tick(g, seconds, inputs) {
   for (let t = 0; t < seconds; t += 1 / 60) g.update(1 / 60, inputs);
 }
 
-test("el mapa tiene siete grupos de arbustos, patrullas accesibles y dos rutas independientes por el río", () => {
-  const map = createMap();
+test("el mapa ampliado conserva arbustos y dos cruces independientes tras abrir el mecanismo", () => {
+  const g = game();
+  g.openBridge();
+  const map = g.map;
   assert.equal(map.bushGroups.length, 7);
-  for (const row of [4, 10]) {
-    map.cells[row][8] = TILE.WATER;
-    assert.ok(findPath(map, map.base, map.pedestal).length > 0);
-    assert.ok(findPath(map, map.pedestal, map.base).length > 0);
-    map.cells[row][8] = TILE.BRIDGE;
+  const rows = [...new Set(g.bridge.tiles.map((t) => t[1]))];
+  for (const upper of [true, false]) {
+    const cells = g.bridge.tiles.filter((t) =>
+      upper ? t[1] < 10 : t[1] >= 10,
+    );
+    for (const [x, y] of cells) map.cells[y][x] = TILE.WATER;
+    assert.ok(findPath(map, map.base, map.pedestal).length);
+    for (const [x, y] of cells) map.cells[y][x] = TILE.BRIDGE;
   }
-  for (const p of map.patrols)
-    for (const [x, y] of p.route)
-      assert.ok(findPath(map, map.base, { x, y }).length);
-  for (const group of map.bushGroups)
-    for (const [x, y] of group)
+  for (const patrol of map.patrols)
+    for (const [x, y] of patrol.route)
       assert.ok(findPath(map, map.base, { x, y }).length);
 });
 
@@ -65,25 +83,20 @@ test("el menú inicia una partida independiente en cada modo", () => {
   }
 });
 
-test("movimiento relativo a pantalla y velocidad diagonal normalizada", () => {
+test("las direcciones de pantalla corresponden a un paso cardinal, nunca diagonal", () => {
   const g = game();
+  openArena(g);
   g.guards = [];
   const p = g.players[0];
-  const measure = (input) => {
+  for (const [input, expected] of [
+    [{ x: 0, y: -1 }, [5.5, 10.5]],
+    [{ x: 1, y: 0 }, [6.5, 11.5]],
+    [{ x: 1, y: 1 }, [6.5, 11.5]],
+  ]) {
     position(p, 5.5, 11.5);
-    const start = { ...p };
     g.movePlayer(p, input, 0.05);
-    return projectVector(p.x - start.x, p.y - start.y);
-  };
-  const up = measure({ x: 0, y: -1 }),
-    right = measure({ x: 1, y: 0 }),
-    diagonal = measure({ x: 1, y: 1 });
-  assert.ok(Math.abs(up.x) < 1e-6 && up.y < 0);
-  assert.ok(right.x > 0 && Math.abs(right.y) < 1e-6);
-  assert.ok(
-    Math.abs(Math.hypot(diagonal.x, diagonal.y) - Math.hypot(up.x, up.y)) <
-      1e-6,
-  );
+    assert.deepEqual([p.x, p.y], expected);
+  }
 });
 
 test("dos jugadores se mueven simultáneamente", () => {
@@ -97,20 +110,19 @@ test("dos jugadores se mueven simultáneamente", () => {
   assert.ok(g.players.every((p, i) => distance(p, before[i]) > 0.1));
 });
 
-test("muros y agua bloquean, los puentes y arbustos permiten caminar", () => {
-  const map = createMap();
-  const p = { x: 7.5, y: 6.5 };
-  moveBody(p, 3, 0, map);
-  assert.ok(p.x <= 8 - CONFIG.bodyRadius + 0.001);
-  assert.ok(canOccupy(map, p.x, p.y));
-  Object.assign(p, { x: 3.5, y: 3.5 });
-  moveBody(p, 4, 0, map);
-  assert.ok(p.x < 4);
-  Object.assign(p, { x: 7.5, y: 4.5 });
-  moveBody(p, 2, 0, map);
-  assert.ok(p.x > 9);
-  assert.ok(canOccupy(map, 3.5, 9.5));
-  assert.ok(isBush(map, 3.5, 9.5));
+test("un paso no entra en agua ni muros, pero sí en puentes y arbustos", () => {
+  const g = game();
+  openArena(g);
+  const p = g.players[0];
+  for (const tile of [TILE.WALL, TILE.WATER, TILE.BRIDGE, TILE.BUSH]) {
+    position(p, 5.5, 5.5);
+    g.map.cells[5][6] = tile;
+    assert.equal(
+      stepBody(p, { x: 1, y: 0 }, 112, g.map),
+      tile === TILE.BRIDGE || tile === TILE.BUSH,
+    );
+    assert.ok(canOccupy(g.map, p.x, p.y));
+  }
 });
 
 test("los movimientos diagonales no atraviesan esquinas sólidas", () => {
@@ -137,6 +149,8 @@ test("los movimientos diagonales no atraviesan esquinas sólidas", () => {
 test("entrar en arbusto oculta automáticamente y salir vuelve a mostrar", () => {
   const g = game();
   g.guards = [];
+  g.map.cells[9][3] = TILE.BUSH;
+  g.map.cells[8][3] = TILE.FLOOR;
   position(g.players[0], 3.5, 9.5);
   g.update(0.01);
   assert.equal(g.players[0].state, PlayerState.HIDDEN);
@@ -149,6 +163,10 @@ test("los guardianes no detectan ocultos ni miran a través de paredes", () => {
   const g = game(),
     guard = g.guards[0],
     p = g.players[0];
+  openArena(g);
+  guard.route = [{ x: 5.5, y: 5.5 }];
+  g.map.cells[9][3] = TILE.BUSH;
+  g.map.cells[3][4] = TILE.WALL;
   position(p, 3.5, 9.5);
   Object.assign(guard, { x: 3.5, y: 8.5 });
   g.refreshPlayerStates();
@@ -164,6 +182,13 @@ test("los guardianes no detectan ocultos ni miran a través de paredes", () => {
 test("guardia recorre PATROL → CHASE → SEARCH → RETURN → PATROL", () => {
   const g = game(),
     guard = g.guards[0];
+  openArena(g);
+  guard.route = [
+    { x: 5.5, y: 5.5 },
+    { x: 7.5, y: 5.5 },
+  ];
+  g.map.cells[9][3] = TILE.BUSH;
+  g.map.cells[9][4] = TILE.BUSH;
   position(g.players[0], 5.5, 5.5);
   Object.assign(guard, { x: 7.5, y: 5.5 });
   updateGuard(guard, g, 0.01);
@@ -181,6 +206,10 @@ test("guardia recorre PATROL → CHASE → SEARCH → RETURN → PATROL", () => 
 
 test("un golpe anunciado captura y permite rodar sin gastar un intento", () => {
   const g = game();
+  openArena(g);
+  g.guards = [g.guards[0]];
+  g.guards[0].route = [{ x: 5.5, y: 5.5 }];
+  g.guards[0].type = "stone";
   position(g.players[0], 5.5, 5.5);
   Object.assign(g.guards[0], { x: 5.5, y: 5.5, attackCooldown: 0 });
   g.update(0.01);
@@ -260,15 +289,15 @@ test("capturar al portador deja bandera accesible y el compañero puede recogerl
   g.runes.forEach((r) => (r.active = true));
   g.openBridge();
   g.guards = [];
-  position(g.players[0], 14.5, 2.5);
+  position(g.players[0], g.map.pedestal.x, g.map.pedestal.y);
   g.collectFlag();
-  position(g.players[0], 12.5, 3.5);
+  position(g.players[0], 5.5, 11.5);
   g.capture(g.players[0]);
   assert.equal(g.flag.state, FlagState.DROPPED);
   assert.equal(g.flag.carrier, null);
   assert.ok(isWalkable(g.map, g.flag.x, g.flag.y));
-  assert.equal(g.flag.x, 12.5);
-  position(g.players[1], 12.5, 3.5);
+  assert.equal(g.flag.x, 5.5);
+  position(g.players[1], 5.5, 11.5);
   g.update(0.01);
   assert.equal(g.flag.state, FlagState.CARRIED);
   assert.equal(g.flag.carrier, 1);
@@ -279,7 +308,7 @@ test("captura doble resta exactamente un intento y reinicia todo el nivel", () =
   const g = game();
   g.runes.forEach((r) => (r.active = true));
   g.openBridge();
-  position(g.players[0], 14.5, 2.5);
+  position(g.players[0], g.map.pedestal.x, g.map.pedestal.y);
   g.collectFlag();
   g.players.forEach((p) => g.capture(p));
   g.checkOutcome();
@@ -291,7 +320,7 @@ test("captura doble resta exactamente un intento y reinicia todo el nivel", () =
   assert.equal(g.state, GameState.PLAYING);
   assert.equal(g.attempts, 2);
   assert.equal(g.flag.state, FlagState.ON_PEDESTAL);
-  assert.ok(g.players.every((p) => distance(p, g.map.base) < 1));
+  assert.ok(g.players.every((p) => distance(p, g.map.base) <= 1));
   assert.ok(g.guards.every((p) => p.state === GuardState.PATROL));
 });
 
@@ -324,7 +353,7 @@ test("la victoria exige bandera, ambos libres y ambos en la entrada", () => {
   position(g.players[1], 5.5, 11.5);
   g.checkOutcome();
   assert.equal(g.state, GameState.PLAYING);
-  position(g.players[1], 2.9, 11.5);
+  position(g.players[1], g.map.base.x, g.map.base.y);
   g.capture(g.players[1]);
   g.checkOutcome();
   assert.equal(g.state, GameState.PLAYING);

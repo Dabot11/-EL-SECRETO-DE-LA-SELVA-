@@ -1,10 +1,5 @@
 import { isWalkable } from "./map.js";
-import {
-  distance,
-  canTravelStraight,
-  projectVector,
-  moveBody,
-} from "./collisions.js";
+import { tickMotion, stepBody, sameTile } from "./grid.js";
 
 // Breadth-first paths use four neighbors, so a path never cuts through a wall corner.
 export function findPath(map, from, to) {
@@ -42,32 +37,15 @@ export function findPath(map, from, to) {
   return [];
 }
 
-// A direct clear segment smooths paths. Replanning starts from the actual position.
+// Every route follows four-neighbor cells; never smooth a corner into a diagonal.
 export function navigate(body, target, speed, dt, map) {
-  if (distance(body, target) < 0.045) {
+  tickMotion(body, dt);
+  if (body.motion) return false;
+  const path = findPath(map, body, target);
+  if (path.length <= 1) {
     body.moving = false;
-    return true;
+    return path.length === 1;
   }
-  let waypoint = target;
-  if (!canTravelStraight(map, body, target)) {
-    const path = findPath(map, body, target);
-    if (!path.length) {
-      body.moving = false;
-      return false;
-    }
-    waypoint = path[0];
-    for (let i = 1; i < path.length; i++) {
-      if (canTravelStraight(map, body, path[i])) waypoint = path[i];
-      else break;
-    }
-  }
-  const dx = waypoint.x - body.x,
-    dy = waypoint.y - body.y,
-    screen = projectVector(dx, dy);
-  const factor = Math.min(
-    1,
-    (speed * dt) / Math.max(0.0001, Math.hypot(screen.x, screen.y)),
-  );
-  moveBody(body, dx * factor, dy * factor, map);
-  return distance(body, target) < 0.08;
+  stepBody(body, { x: path[1].x - body.x, y: path[1].y - body.y }, speed, map);
+  return sameTile(body, target);
 }
