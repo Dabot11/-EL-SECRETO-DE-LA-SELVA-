@@ -1,0 +1,14 @@
+{
+  "name": "el-secreto-de-la-selva",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Una aventura cooperativa de David y Tavito. Canvas 2D, sin dependencias.",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

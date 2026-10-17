@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#102c26" />
+    <meta
+      name="description"
+      content="Una aventura cooperativa de David y Tavito. Explora un templo perdido, esquiva guardianes y recupera la bandera junto a tu compañero."
+    />
+    <title>El Secreto de la Selva · Una aventura cooperativa</title>
+    <link rel="icon" href="./assets/leaf.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <a
+          class="brand"
+          href="./"
+          aria-label="Inicio de El Secreto de la Selva"
+        >
+          <img src="./assets/leaf.svg" width="34" height="34" alt="" />
+          <span
+            >DAVID & TAVITO<small
+              >PEQUEÑOS MUNDOS · GRANDES AVENTURAS</small
+            ></span
+          >
+        </a>
+        <span class="edition"><i></i> HECHO PARA JUGAR JUNTOS</span>
+      </header>
+
+      <main>
+        <div class="chapter-bar">
+          <span><b>01</b> EL TEMPLO PERDIDO</span
+          ><span>EXPLORA · ESCÓNDETE · RESCATA</span>
+        </div>
+        <section class="game-shell" aria-label="El Secreto de la Selva">
+          <canvas
+            id="game-canvas"
+            width="768"
+            height="432"
+            tabindex="0"
+            aria-label="Mapa isométrico del templo. Jugador uno: WASD. Jugador dos: flechas. Escape para pausar."
+            >Tu navegador necesita soporte para Canvas 2D para jugar.</canvas
+          >
+
+          <section id="menu" class="menu-screen overlay">
+            <div class="menu-copy">
+              <div class="eyebrow">
+                <span class="tiny-star">✦</span> UNA AVENTURA COOPERATIVA
+              </div>
+              <h1>
+                EL SECRETO<br />DE LA <span>SELVA</span
+                ><span class="title-dot">.</span>
+              </h1>
+              <p>
+                Un templo olvidado. Una bandera mágica.<br />Y una aventura que
+                solo termina juntos.
+              </p>
+              <div class="menu-buttons">
+                <button id="play-solo" class="button primary">
+                  <span class="button-icon" aria-hidden="true">1</span
+                  ><span>Jugar solo<small>CON UN COMPAÑERO IA</small></span
+                  ><span class="arrow" aria-hidden="true">→</span>
+                </button>
+                <button id="play-duo" class="button secondary">
+                  <span class="button-icon" aria-hidden="true">2</span
+                  ><span
+                    >Jugar de a dos<small
+                      >UN TECLADO, DOS EXPLORADORES</small
+                    ></span
+                  ><span class="arrow" aria-hidden="true">→</span>
+                </button>
+              </div>
+              <button id="how-to" class="text-button">
+                <span>?</span> Cómo jugar <span class="text-arrow">→</span>
+              </button>
+            </div>
+            <div class="scene-caption">
+              <span class="caption-line"></span> HAY SECRETOS QUE SE DESCUBREN
+              EN EQUIPO.
+            </div>
+          </section>
+
+          <div id="hud" class="hud" hidden>
+            <div class="hud-top">
+              <div class="mission">
+                <small>LA MISIÓN</small
+                ><strong id="objective">Encuentra la bandera</strong
+                ><span id="flag-status">⚑ En el pedestal</span>
+              </div>
+              <div class="team-attempts">
+                <small>INTENTOS COMPARTIDOS</small>
+                <div id="attempts" aria-label="3 intentos compartidos">
+                  <i class="crystal"></i><i class="crystal"></i
+                  ><i class="crystal"></i>
+                </div>
+              </div>
+            </div>
+            <div class="hud-bottom">
+              <div class="players-info">
+                <div class="player-info blue">
+                  <canvas
+                    id="portrait-blue"
+                    width="40"
+                    height="48"
+                    aria-hidden="true"
+                  ></canvas
+                  ><span
+                    ><strong>EXPLORADOR 1</strong
+                    ><small id="player-one-status">W A S D</small></span
+                  >
+                </div>
+                <div class="player-info red">
+                  <canvas
+                    id="portrait-red"
+                    width="40"
+                    height="48"
+                    aria-hidden="true"
+                  ></canvas
+                  ><span
+                    ><strong>EXPLORADOR 2</strong
+                    ><small id="player-two-status">COMPAÑERO IA</small></span
+                  >
+                </div>
+              </div>
+              <button
+                id="pause"
+                class="utility-button"
+                aria-label="Pausar partida"
+              >
+                II <span>PAUSA</span><kbd>ESC</kbd>
+              </button>
+            </div>
+            <div
+              id="toast"
+              class="toast"
+              role="status"
+              aria-live="polite"
+              hidden
+            ></div>
+          </div>
+
+          <section
+            id="how-screen"
+            class="modal-layer"
+            hidden
+            aria-labelledby="how-title"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div class="modal how-modal">
+              <span class="eyebrow">ANTES DE ENTRAR AL TEMPLO</span>
+              <h2 id="how-title">La aventura es juntos.</h2>
+              <p class="modal-intro">
+                Recuperen la bandera roja y regresen <strong>los dos</strong> a
+                la entrada.
+              </p>
+              <div class="controls-grid">
+                <div>
+                  <span class="blue-label">EXPLORADOR 1</span>
+                  <div class="key-block">
+                    <kbd>W</kbd><br /><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
+                  </div>
+                </div>
+                <div>
+                  <span class="red-label">EXPLORADOR 2</span>
+                  <div class="key-block">
+                    <kbd>↑</kbd><br /><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd>
+                  </div>
+                </div>
+              </div>
+              <div class="how-rules">
+                <p>
+                  <b>01</b
+                  ><span
+                    ><strong>Escóndanse en los arbustos.</strong> Los guardianes
+                    no pueden verlos allí.</span
+                  >
+                </p>
+                <p>
+                  <b>02</b
+                  ><span
+                    ><strong>Rescaten a su compañero.</strong> Acérquense a su
+                    burbuja para liberarlo.</span
+                  >
+                </p>
+                <p>
+                  <b>03</b
+                  ><span
+                    ><strong>Cuiden sus tres intentos.</strong> Solo pierden uno
+                    si ambos quedan atrapados.</span
+                  >
+                </p>
+              </div>
+              <p class="auto-note">
+                Todo sucede al acercarte. ¡Solo necesitas moverte!<br /><small
+                  >En modo solo, el compañero te sigue y viene a
+                  rescatarte.</small
+                >
+              </p>
+              <button id="close-how" class="button primary compact">
+                ¡Entendido! <span>→</span>
+              </button>
+            </div>
+          </section>
+
+          <section
+            id="state-screen"
+            class="modal-layer"
+            hidden
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="state-title"
+          >
+            <div class="modal result-modal">
+              <span id="state-eyebrow" class="eyebrow"
+                >UN MOMENTO PARA RESPIRAR</span
+              >
+              <canvas
+                id="result-art"
+                width="180"
+                height="80"
+                aria-hidden="true"
+              ></canvas>
+              <h2 id="state-title">Aventura en pausa</h2>
+              <p id="state-description"></p>
+              <div class="result-buttons">
+                <button id="state-primary" class="button primary compact">
+                  Continuar</button
+                ><button id="state-menu" class="text-button">
+                  Menú principal <span>→</span>
+                </button>
+              </div>
+            </div>
+          </section>
+          <div id="round-screen" class="round-message" hidden role="status">
+            <span>✦</span>
+            <h2>¡Los guardianes los atraparon!</h2>
+            <p id="round-description">Respiren… la aventura continúa.</p>
+          </div>
+        </section>
+
+        <div class="adventure-notes" aria-label="Consejos de la aventura">
+          <div class="adventure-note">
+            <span class="note-icon leaf-icon">❧</span>
+            <div>
+              <h3>La selva es tu escondite</h3>
+              <p>Entre las hojas, nadie puede verte.</p>
+            </div>
+          </div>
+          <div class="adventure-note">
+            <span class="note-icon rescue-icon">◇</span>
+            <div>
+              <h3>Nadie se queda atrás</h3>
+              <p>Acércate a tu compañero para rescatarlo.</p>
+            </div>
+          </div>
+          <div class="adventure-note">
+            <span class="note-icon flag-icon">⚑</span>
+            <div>
+              <h3>Vuelvan con el secreto</h3>
+              <p>Una bandera. Dos exploradores. Juntos.</p>
+            </div>
+          </div>
+        </div>
+        <p class="keyboard-notice">
+          Esta aventura se juega en computadora con teclado. WASD + flechas.
+        </p>
+      </main>
+      <footer>
+        <span
+          >UNA IDEA DE DAVID Y TAVITO <span class="footer-star">✦</span> HECHA
+          PARA EXPLORAR</span
+        ><span>AVENTURA 01 <span class="footer-divider">/</span> V.1.0</span>
+      </footer>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
