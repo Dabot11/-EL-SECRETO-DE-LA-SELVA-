@@ -95,7 +95,8 @@ export function attackCells(guard, player, map) {
 function beginAttack(guard, game, player) {
   const spec = ENEMIES[guard.type];
   const cells = attackCells(guard, player, game.map);
-  guard.attackTimer = spec.windup * (game.mode === 1 ? 1.15 : 1);
+  guard.attackTimer =
+    spec.windup * (guard.windupScale ?? 1) * (game.mode === 1 ? 1.25 : 1);
   guard.attack = {
     kind: guard.type,
     origin: { x: guard.x, y: guard.y },
@@ -108,9 +109,12 @@ function beginAttack(guard, game, player) {
   guard.moving = false;
   game.emit("warning", guard);
 }
-function recover(guard) {
+function recover(guard, game) {
   guard.state = GuardState.RECOVER;
-  guard.recovery = ENEMIES[guard.type].recovery;
+  guard.recovery =
+    ENEMIES[guard.type].recovery *
+    (guard.recoveryScale ?? 1) *
+    (game.mode === 1 ? 1.1 : 1);
   guard.attackCooldown = 0.55;
   guard.moving = false;
 }
@@ -118,6 +122,7 @@ export function updateGuard(guard, game, dt) {
   const { map, players } = game,
     spec = ENEMIES[guard.type];
   tickMotion(guard, dt);
+  guard.alarmSignal = Math.max(0, (guard.alarmSignal ?? 0) - dt);
   guard.markedTime = Math.max(0, (guard.markedTime ?? 0) - dt);
   if (guard.state === GuardState.STUNNED) {
     guard.stunTime -= dt;
@@ -157,7 +162,7 @@ export function updateGuard(guard, game, dt) {
           )
             game.capture(player);
         game.emit("impact", guard);
-        recover(guard);
+        recover(guard, game);
       }
     }
     return;
@@ -168,13 +173,13 @@ export function updateGuard(guard, game, dt) {
       next = guard.attack.cells[guard.lungeIndex + 1];
     if (!next) {
       game.emit("impact", guard);
-      recover(guard);
+      recover(guard, game);
       return;
     }
     if (
       !stepBody(guard, { x: next.x - guard.x, y: next.y - guard.y }, 168, map)
     ) {
-      recover(guard);
+      recover(guard, game);
       return;
     }
     guard.lungeIndex++;
@@ -186,7 +191,7 @@ export function updateGuard(guard, game, dt) {
   }
   const range =
     (guard.detectionRange ?? CONFIG.detectionRange) +
-    (game.alarm ? 0.55 : 0) +
+    (game.alarmActive ? map.mission.alarmDetection : 0) +
     (guard.state === GuardState.CHASE ? 1 : 0);
   const seen = players
     .filter((p) => canDetect(guard, p, map, range))
@@ -213,7 +218,7 @@ export function updateGuard(guard, game, dt) {
         (other) =>
           other !== guard &&
           [GuardState.WINDUP, GuardState.LUNGE].includes(other.state) &&
-          distance(other, guard) < 3,
+          distance(other, guard) < map.mission.attackSpacing,
       ) &&
       canTravelStraight(map, guard, seen)
     ) {
@@ -257,7 +262,9 @@ export function updateGuard(guard, game, dt) {
       target,
       guard.speed *
         (game.mode === 1 ? 0.92 : 1) *
-        (game.alarm && guard.state === GuardState.CHASE ? 1.12 : 1),
+        (game.alarmActive && guard.state === GuardState.CHASE
+          ? map.mission.alarmSpeed
+          : 1),
       0,
       map,
     );

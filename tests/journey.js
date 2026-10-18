@@ -37,6 +37,7 @@ export function playJourney(
   missionIndex = 0,
   resume = false,
   collectTreasures = false,
+  useAbilities = true,
 ) {
   if (!resume) game.start(mode, missionIndex);
   let captures = 0,
@@ -90,7 +91,7 @@ export function playJourney(
             ...steer(game, player, escape),
             dash: player.dashCooldown <= 0,
           };
-        // The first jaguar must actually hit the statue; interrupting its lunge would reset the puzzle.
+        // The bridge's jaguar must actually hit the statue before using the tools.
         if (!game.bridge || game.bridge.open) input.light = true;
       }
       if (
@@ -120,6 +121,12 @@ export function playJourney(
         dangerAt(game, { x: player.x + input.x, y: player.y + input.y })
       )
         input = { ...input, x: 0, y: 0 };
+      if (!useAbilities) {
+        input.light = false;
+        input.vine = false;
+        input.dash = false;
+        input.pass = false;
+      }
       return input;
     });
     game.update(1 / 60, inputs);
@@ -157,5 +164,6 @@ export function playJourney(
     bridge: game.bridge?.open ?? null,
     passes: game.stats.passes,
     combos: game.stats.combos,
+    alarm: game.alarmActive,
   };
 }

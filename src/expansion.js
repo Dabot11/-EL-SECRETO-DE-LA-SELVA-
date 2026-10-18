@@ -6,17 +6,14 @@ const patrol = (type, route) => ({ type, route });
 export const EXTRA_MISSIONS = [
   {
     name: "El Pantano de la Niebla",
-    subtitle: "Tres orillas, muchas salidas",
+    subtitle: "Combina luz y liana",
     theme: "mist",
     briefing:
-      "Activa las tres runas del pantano. Alterna los cruces y busca hojas antes de la siguiente patrulla.",
+      "Atrae al jaguar a la estatua. Ilumina el mecanismo y tira con la liana; después activa las tres runas y captura la bandera.",
     difficulty: 6,
-    speed: 56,
-    detection: 4.6,
-    search: 3.1,
     par: 150,
     water: [
-      ...row(5, range(4, 16)),
+      ...row(5, range(1, 16)),
       ...row(9, range(4, 16)),
       ...column(8, range(1, 4)),
     ],
@@ -70,6 +67,14 @@ export const EXTRA_MISSIONS = [
       [12, 7],
       [14, 2],
     ],
+    bridge: {
+      statue: { x: 8.5, y: 6.5 },
+      winch: { x: 5.5, y: 6.5 },
+      tiles: [
+        [6, 5],
+        [14, 5],
+      ],
+    },
     relics: [
       [2, 2],
       [9, 1],
@@ -80,11 +85,11 @@ export const EXTRA_MISSIONS = [
       { x: 14, y: 4, offset: 2.4, type: "mist" },
       { x: 12, y: 6, offset: 4, type: "mist" },
     ],
-    enemyTypes: ["stone", "hunter", "spirit", "warden", "hunter", "spirit"],
+    enemyTypes: ["stone", "hunter", "hunter", "spirit", "stone", "spirit"],
     patrols: [
       patrol("stone", [
-        [2, 5],
-        [3, 5],
+        [2, 6],
+        [3, 6],
         [3, 8],
         [2, 8],
       ]),
@@ -122,14 +127,11 @@ export const EXTRA_MISSIONS = [
   },
   {
     name: "Las Canteras del Ámbar",
-    subtitle: "El refugio está tras la esquina",
+    subtitle: "El gran golpe del Guardián Solar",
     theme: "amber",
     briefing:
-      "Enciende las tres runas entre las canteras. Usa los muros para cortar la persecución y esquiva las esporas.",
+      "El Guardián Solar marca una zona grande antes de golpear. Usa el impulso para salir y sus pausas para avanzar hacia la bandera.",
     difficulty: 7,
-    speed: 58,
-    detection: 4.7,
-    search: 3.2,
     par: 160,
     water: [
       [13, 2],
@@ -258,9 +260,6 @@ export const EXTRA_MISSIONS = [
     briefing:
       "Activa las cuatro runas de las islas. Observa los pulsos antes de cruzar y usa los pasos alternativos para regresar.",
     difficulty: 8,
-    speed: 60,
-    detection: 4.8,
-    search: 3.3,
     par: 175,
     water: [
       ...column(5, range(1, 12)),
@@ -388,9 +387,6 @@ export const EXTRA_MISSIONS = [
     briefing:
       "Enciende las cuatro runas exteriores y entra al patio central. Las puertas tienen esporas: espera el momento de pasar.",
     difficulty: 9,
-    speed: 62,
-    detection: 4.9,
-    search: 3.4,
     par: 190,
     water: [
       [1, 1],
@@ -528,14 +524,11 @@ export const EXTRA_MISSIONS = [
   },
   {
     name: "El Corazón de la Selva",
-    subtitle: "La última reliquia",
+    subtitle: "La última bandera",
     theme: "heart",
     briefing:
-      "Activa las cuatro runas, entra a la isla central y recupera la última reliquia. Elige otra salida si los guardianes cierran el paso.",
+      "Activa las cuatro runas, entra a la isla central y captura la última bandera. Elige otra salida si los guardianes cierran el paso.",
     difficulty: 10,
-    speed: 64,
-    detection: 5,
-    search: 3.5,
     par: 205,
     water: [
       ...row(4, range(6, 11)),

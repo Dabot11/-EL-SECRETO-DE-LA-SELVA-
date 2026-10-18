@@ -47,6 +47,7 @@ with sync_playwright() as playwright:
     check("Escape cierra la ayuda", page.locator("#how-screen").is_hidden())
     page.locator("#play-duo").click()
     check("Selección de modo cooperativo", page.evaluate("app.game.mode === 2 && app.game.state === 'PLAYING'"))
+    check("La primera misión permite capturar la bandera sin runas ni mecanismo",page.evaluate("app.game.sealOpen() && app.game.bridge===null && app.game.runes.length===0 && app.game.guards.every(g=>g.type==='stone')") and 'bandera' in page.locator('#objective').inner_text().lower())
     before = page.evaluate("app.game.players.map(p => ({x:p.x,y:p.y}))")
     scroll = page.evaluate("window.scrollY")
     page.keyboard.down("d")
@@ -87,7 +88,7 @@ with sync_playwright() as playwright:
     page.wait_for_timeout(360)
     page.keyboard.up('ArrowRight')
     check("Impulso rojo independiente con Shift derecho",page.evaluate("app.game.stats.dashes===2 && app.game.players[1].dashCooldown>0"))
-    check("HUD muestra runas, tesoros y recarga", 'PASO 1/3' in page.locator('#rune-count').inner_text() and 'TESOROS' in page.locator('#relic-count').inner_text() and 'RECARGA' in page.locator('#ability-dash-two').get_attribute('aria-label') and page.locator('#ability-dash-two.recharging').count()==1)
+    check("HUD muestra runas, tesoros y recarga", 'BANDERA LIBRE' in page.locator('#rune-count').inner_text() and 'TESOROS' in page.locator('#relic-count').inner_text() and 'RECARGA' in page.locator('#ability-dash-two').get_attribute('aria-label') and page.locator('#ability-dash-two.recharging').count()==1)
 
     page.evaluate("""() => {
       const g=app.game;g.start(2,1);g.guards=[];g.runes=[];g.relics=[];g.traps=[];
@@ -228,13 +229,13 @@ with sync_playwright() as playwright:
     page.evaluate("() => {app.game.guards=[];app.game.takeFlag(app.game.players[0]);}")
     page.keyboard.press('f')
     page.wait_for_timeout(70)
-    check("F pasa la reliquia de azul a rojo",page.evaluate("app.game.flag.carrier===1 && app.game.stats.passes===1"))
+    check("F pasa la bandera de azul a rojo",page.evaluate("app.game.flag.carrier===1 && app.game.stats.passes===1"))
     page.screenshot(path=str(OUTPUT / "pass-v5.png"),full_page=True)
     page.wait_for_timeout(820)
     page.keyboard.press('l')
     page.wait_for_timeout(70)
-    check("L devuelve la reliquia a azul",page.evaluate("app.game.flag.carrier===0 && app.game.stats.passes===2"))
-    page.evaluate("() => {app.game.start(1);app.game.guards=[];app.game.bridge.charged=true;Object.assign(app.game.players[0],app.game.bridge.winch);app.input.clear();}")
+    check("L devuelve la bandera a azul",page.evaluate("app.game.flag.carrier===0 && app.game.stats.passes===2"))
+    page.evaluate("() => {app.game.start(1,5);app.game.guards=[];app.game.bridge.charged=true;Object.assign(app.game.players[0],app.game.bridge.winch);app.input.clear();}")
     page.wait_for_timeout(50)
     floor_before=page.evaluate("app.renderer.groundLayer.toDataURL()")
     page.keyboard.down('e')
@@ -243,6 +244,7 @@ with sync_playwright() as playwright:
     page.keyboard.press('q')
     page.wait_for_timeout(70)
     check("Q abre el puente en solitario y actualiza el suelo dibujado",page.evaluate("app.game.bridge.open") and page.evaluate("app.renderer.groundLayer.toDataURL()")!=floor_before)
+    check("Tras abrir el puente avanzado, el HUD pide las runas pendientes",'runas' in page.locator('#objective').inner_text().lower() and 'RUNAS' in page.locator('#rune-count').inner_text())
     page.screenshot(path=str(OUTPUT / "bridge-open-v5.png"),full_page=True)
     page.wait_for_timeout(5100)
     check("Mantener E no repite la linterna al terminar la recarga",page.evaluate("app.game.stats.lights===1"))
@@ -251,6 +253,23 @@ with sync_playwright() as playwright:
     page.wait_for_timeout(70)
     check("Reintentar cierra el puente también visualmente",page.evaluate("!app.game.bridge.open && app.renderer.cachedRevision===app.game.map.revision") and page.evaluate("app.renderer.groundLayer.toDataURL()") == floor_before)
     page.screenshot(path=str(OUTPUT / "bridge-closed-v5.png"),full_page=True)
+    # Alarm has a visible preparation phase; a paused game must keep that exact countdown.
+    page.evaluate("""()=>{
+      app.game.start(2,0);const g=app.game;
+      Object.assign(g.players[0],g.map.pedestal,{motion:null,protection:99});g.collectFlag();
+      window.originalPatrols=JSON.stringify(g.guards.map(guard=>guard.route));app.ui.update();
+    }""")
+    check("Recoger la bandera muestra una cuenta de alerta y el objetivo de regreso",'ALERTA EN' in page.locator('#rune-count').inner_text() and 'entrada' in page.locator('#objective').inner_text())
+    page.keyboard.press('Escape')
+    alarm_timer=page.evaluate('app.game.alarmTimer')
+    page.wait_for_timeout(150)
+    check("Pausa detiene la preparación de las patrullas",page.evaluate('app.game.alarmTimer')==alarm_timer and not page.evaluate('app.game.alarmActive'))
+    page.locator('#state-primary').click()
+    page.wait_for_timeout(2600)
+    check("La alarma cambia las patrullas y lo anuncia en el HUD",page.evaluate('app.game.alarmActive && JSON.stringify(app.game.guards.map(g=>g.route))!==originalPatrols') and 'CRUCES VIGILADOS' in page.locator('#rune-count').inner_text())
+    page.screenshot(path=str(OUTPUT / "alarm-return.png"),full_page=True)
+    page.evaluate('app.game.retryMission();app.ui.update()')
+    check("Reintentar restaura las patrullas y la bandera libre",page.evaluate('!app.game.alarm && JSON.stringify(app.game.guards.map(g=>g.route))===originalPatrols') and 'BANDERA LIBRE' in page.locator('#rune-count').inner_text())
     # Input activation of focused UI buttons must not consume either tool.
     page.locator('#pause').focus()
     page.keyboard.press('Enter')
@@ -276,7 +295,7 @@ with sync_playwright() as playwright:
             }""", {"mode":mode,"mission":mission})
             journeys.append(result)
             expected = "VICTORY" if mission == 9 else "MISSION_COMPLETE"
-            check(f"Mapa {mission+1}, modo {mode}: bandera y regreso con guardianes activos", result["state"] == expected and result["runes"] == [0,2,2,3,3,3,3,4,4,4][mission] and result["missionIndex"] == mission)
+            check(f"Mapa {mission+1}, modo {mode}: bandera y regreso con guardianes activos", result["state"] == expected and result["runes"] == [0,1,2,2,3,3,3,4,4,4][mission] and result["missionIndex"] == mission and result["alarm"])
             title="¡AVENTURA COMPLETADA!" if mission == 9 else "¡MISIÓN COMPLETADA!"
             check(f"Resultado de misión {mission+1}, modo {mode}", page.locator("#state-title").inner_text() == title)
             check(f"Estrellas y estadísticas visibles, misión {mission+1}, modo {mode}",page.locator('#result-stats').is_visible() and page.locator('.result-stars').get_attribute('aria-label').endswith('de 3 estrellas'))
@@ -298,7 +317,7 @@ with sync_playwright() as playwright:
       app.ui.update();
     }""")
     page.locator("#state-primary").click()
-    check("Reintentar la misión 4 conserva ese mapa, el modo y restaura tres intentos", page.evaluate("app.game.missionIndex === 3 && app.game.mode === 2 && app.game.attempts === 3 && app.game.guards.length === 5"))
+    check("Reintentar la misión 4 conserva ese mapa, el modo y restaura tres intentos", page.evaluate("app.game.missionIndex === 3 && app.game.mode === 2 && app.game.attempts === 3 && app.game.guards.length === 4"))
 
     # Saved checkpoints and replay selection survive a real reload.
     page.reload(wait_until='networkidle')

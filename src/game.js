@@ -81,6 +81,8 @@ export class Game {
       y: t.y + 0.5,
     }));
     this.alarm = false;
+    this.alarmActive = false;
+    this.alarmTimer = 0;
     this.lockHintTimer = 0;
     this.round++;
   }
@@ -171,9 +173,11 @@ export class Game {
     this.map.revision++;
     this.emit("bridge", this.bridge.winch);
     this.notify(
-      this.mode === 1
-        ? "¡Puente abierto! Recupera la reliquia y vuelve."
-        : "¡Puente abierto! Recuperen la reliquia y pásensela durante la huida.",
+      this.runes.some((r) => !r.active)
+        ? "¡Puente abierto! Activa las runas que faltan y captura la bandera."
+        : this.mode === 1
+          ? "¡Puente abierto! Recupera la bandera y vuelve."
+          : "¡Puente abierto! Recuperen la bandera y pásensela durante la huida.",
     );
   }
   strikeStatue(guard, previous) {
@@ -208,7 +212,12 @@ export class Game {
     return passFlag(this, player);
   }
   takeFlag(player) {
-    this.alarm = true;
+    const firstPickup = !this.alarm;
+    if (!this.alarm) {
+      this.alarm = true;
+      this.alarmTimer =
+        this.map.mission.alarmDelay + (this.mode === 1 ? 0.4 : 0);
+    }
     Object.assign(this.flag, {
       state: FlagState.CARRIED,
       carrier: player.id,
@@ -217,9 +226,30 @@ export class Game {
     });
     this.emit("flag", player);
     this.notify(
+      !firstPickup
+        ? "¡Bandera recuperada! La alarma sigue activa: vuelve a la entrada."
+        : this.mode === 1
+          ? "¡Bandera capturada! Las patrullas se preparan. Vuelve a la entrada."
+          : "¡Bandera capturada! Preparen la huida. Azul: F para pasar. Rojo: L para pasar.",
+    );
+  }
+  updateAlarm(dt) {
+    if (!this.alarm || this.alarmActive) return;
+    this.alarmTimer = Math.max(0, this.alarmTimer - dt);
+    if (this.alarmTimer > 0) return;
+    this.alarmActive = true;
+    for (const guard of this.guards) {
+      guard.route = guard.alarmRoute.map((point) => ({ ...point }));
+      guard.waypoint = guard.route.length - 1;
+      guard.alarmSignal = 2;
+      // Finish the committed step and any attack/stun before following the new route.
+      if ([GuardState.PATROL, GuardState.RETURN].includes(guard.state))
+        guard.state = GuardState.RETURN;
+    }
+    this.notify(
       this.mode === 1
-        ? "¡La reliquia es tuya! Regresa a la entrada."
-        : "¡Reliquia recuperada! Azul: F para pasar. Rojo: L para pasar.",
+        ? "¡Patrullas en los cruces! Usa muros y hojas para perderlas."
+        : "¡Patrullas en los cruces! Uno abre camino y el otro lleva la bandera.",
     );
   }
   movePlayer(player, input, dt) {
@@ -300,7 +330,7 @@ export class Game {
         const count = this.runes.filter((r) => r.active).length;
         this.notify(
           count === this.runes.length
-            ? "¡El sello se abrió! La reliquia ya está disponible."
+            ? "¡El sello se abrió! La bandera ya está disponible."
             : `Runa ${count} de ${this.runes.length} activada.`,
         );
       }
@@ -376,7 +406,7 @@ export class Game {
         player.protection = 1.7;
         player.state = PlayerState.PROTECTED;
         this.notify(
-          `Quedan ${player.hearts} corazones. Antes de tomar la reliquia puedes curarte en la entrada.`,
+          `Quedan ${player.hearts} corazones. Antes de tomar la bandera puedes curarte en la entrada.`,
         );
       }
       return true;
@@ -399,7 +429,7 @@ export class Game {
         x: player.x,
         y: player.y,
       });
-      this.notify("¡La reliquia cayó! Acércate para recuperarla.");
+      this.notify("¡La bandera cayó! Acércate para recuperarla.");
     } else this.notify("¡Tu compañero necesita un rescate!");
     for (const guard of this.guards)
       if (guard.target === player.id) {
@@ -464,8 +494,8 @@ export class Game {
       if (this.lockHintTimer <= 0) {
         this.notify(
           this.bridge && !this.bridge.open
-            ? "La reliquia está sellada. Abre el puente del jaguar."
-            : "La reliquia está sellada. Activa las runas de jade.",
+            ? "La bandera está sellada. Abre el puente del jaguar."
+            : "La bandera está sellada. Activa las runas de jade.",
         );
         this.lockHintTimer = 4;
       }
@@ -553,6 +583,7 @@ export class Game {
     this.stats.time += dt;
     this.lockHintTimer = Math.max(0, this.lockHintTimer - dt);
     this.collectObjectives(dt);
+    this.updateAlarm(dt);
     // Attacks resolve before rescue progress, so one simultaneous capture costs one attempt.
     this.collectFlag();
     for (const guard of this.guards) updateGuard(guard, this, dt);

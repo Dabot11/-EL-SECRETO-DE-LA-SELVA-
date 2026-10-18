@@ -1,55 +1,42 @@
 import { EXTRA_MISSIONS } from "./expansion.js";
+import { DIFFICULTY } from "./difficulty.js";
 // Objectives deliberately pull explorers into different parts of each authored map.
 // Coordinates refer to tile centers; no objective replaces collision geometry.
 export const CHALLENGES = [
   {
-    speed: 46,
     par: 65,
     briefing:
-      "Atrae al jaguar hacia la estatua, ilumina el mecanismo y abre el puente con la liana.",
+      "Camina hasta la bandera y llévala a la entrada. Cuando aparezcan cuadros de ataque, sal de ellos.",
     runes: [],
-    bridge: {
-      statue: { x: 6.5, y: 5.5 },
-      winch: { x: 7.5, y: 9.5 },
-      tiles: [
-        [8, 4],
-        [8, 10],
-      ],
-    },
     relics: [
       [2, 2],
       [10, 11],
       [15, 9],
     ],
-    enemyTypes: ["hunter", "stone", "spirit"],
+    enemyTypes: ["stone", "stone"],
     traps: [],
   },
   {
-    speed: 48,
     par: 90,
     extraBridges: [
       [4, 7],
       [11, 7],
     ],
     briefing:
-      "Activa las dos runas a ambos lados del río. El jaguar avisa antes de saltar.",
-    runes: [
-      [10, 11],
-      [5, 2],
-    ],
+      "Quédate junto a la runa para liberar la bandera. Hay varios cruces: observa por dónde pasan los centinelas.",
+    runes: [[5, 2]],
     relics: [
       [2, 2],
       [14, 10],
       [15, 5],
     ],
-    enemyTypes: ["stone", "hunter", "spirit"],
-    traps: [{ x: 12, y: 6, offset: 1, type: "mist" }],
+    enemyTypes: ["stone", "stone", "stone"],
+    traps: [],
   },
   {
-    speed: 50,
     par: 105,
     briefing:
-      "Explora los tres senderos. Evita las esporas cuando el suelo se ilumine.",
+      "El jaguar salta en línea recta. Al ver su aviso, muévete a un lado. Activa las dos runas y captura la bandera.",
     runes: [
       [3, 2],
       [13, 11],
@@ -59,42 +46,33 @@ export const CHALLENGES = [
       [10, 10],
       [15, 5],
     ],
-    enemyTypes: ["stone", "hunter", "stone", "spirit"],
-    traps: [
-      { x: 6, y: 5, offset: 0, type: "spores" },
-      { x: 12, y: 8, offset: 2.7, type: "spores" },
-    ],
+    enemyTypes: ["stone", "hunter", "stone", "stone"],
+    traps: [],
   },
   {
-    speed: 52,
     par: 120,
     briefing:
-      "Enciende tres runas lunares. Los cuadros azules anuncian el pulso de los espíritus.",
+      "El espíritu avisa un pulso azul: sal de los cuadros marcados. Activa las dos runas y vuelve con la bandera.",
     runes: [
       [5, 2],
       [9, 11],
-      [14, 5],
     ],
     relics: [
       [2, 2],
       [12, 2],
       [16, 10],
     ],
-    enemyTypes: ["stone", "hunter", "stone", "spirit", "spirit"],
-    traps: [
-      { x: 8, y: 10, offset: 1.2, type: "frost" },
-      { x: 11, y: 5, offset: 3, type: "frost" },
-    ],
+    enemyTypes: ["stone", "hunter", "spirit", "stone"],
+    traps: [],
   },
   {
-    speed: 54,
     par: 140,
     extraBridges: [
       [6, 4],
       [12, 3],
     ],
     briefing:
-      "Despierta las tres runas del santuario. El Guardián Solar prepara un gran golpe: sal de los cuadros marcados.",
+      "El suelo brillante avisa una trampa que te frena. Espera o usa el impulso; activa tres runas y elige por dónde volver.",
     runes: [
       [4, 1],
       [10, 11],
@@ -105,14 +83,14 @@ export const CHALLENGES = [
       [9, 2],
       [16, 11],
     ],
-    enemyTypes: ["stone", "hunter", "stone", "warden", "spirit", "hunter"],
+    enemyTypes: ["stone", "hunter", "stone", "spirit", "hunter"],
     traps: [
       { x: 7, y: 10, offset: 0.7, type: "sun" },
       { x: 13, y: 9, offset: 3.2, type: "sun" },
     ],
   },
   ...EXTRA_MISSIONS,
-];
+].map((mission, index) => ({ ...mission, ...DIFFICULTY[index] }));
 export const ENEMIES = Object.freeze({
   stone: {
     name: "Centinela de piedra",

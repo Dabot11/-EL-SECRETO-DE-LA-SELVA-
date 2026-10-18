@@ -50,7 +50,14 @@ function arena(type = "stone") {
       x === 0 || x === 17 || y === 0 || y === 13 ? "#" : ".",
     ),
   );
-  Object.assign(guard, { type, x: 7.5, y: 6.5, attackCooldown: 0 });
+  Object.assign(guard, {
+    type,
+    x: 7.5,
+    y: 6.5,
+    attackCooldown: 0,
+    route: [{ x: 7.5, y: 6.5 }],
+    waypoint: 0,
+  });
   place(g.players[0], { x: 8, y: 6.5 });
   place(g.players[1], g.map.base);
   return { g, guard, p: g.players[0] };
@@ -68,7 +75,7 @@ test("todas las runas, tesoros y trampas están en suelo alcanzable y fuera de l
   }
 });
 test("la bandera queda sellada hasta activar todas las runas; salir interrumpe la carga", () => {
-  const g = fixture(1),
+  const g = fixture(2),
     p = g.players[0];
   place(p, g.flag);
   g.collectFlag();
@@ -170,7 +177,7 @@ for (const type of ["stone", "spirit", "warden"])
     assert.ok(dangerAt(g, p));
     const origin = { ...guard.attack.origin };
     place(p, { x: 12, y: 9 });
-    for (let i = 0; i < Math.ceil(ENEMIES[type].windup * 100) + 5; i++)
+    for (let i = 0; i < Math.ceil(guard.attack.duration * 100) + 5; i++)
       updateGuard(guard, g, 0.01);
     assert.equal(p.state, PlayerState.NORMAL);
     assert.equal(guard.state, GuardState.RECOVER);
@@ -179,7 +186,12 @@ for (const type of ["stone", "spirit", "warden"])
 test("un pulso atrapa al jugador que ignora el aviso y respeta la zona segura", () => {
   const { g, guard, p } = arena("spirit");
   updateGuard(guard, g, 0.01);
-  for (let i = 0; i < 110; i++) updateGuard(guard, g, 0.01);
+  for (
+    let i = 0, steps = Math.ceil(guard.attack.duration * 100) + 2;
+    i < steps;
+    i++
+  )
+    updateGuard(guard, g, 0.01);
   assert.equal(p.state, "CAPTURED");
   place(p, g.map.base);
   Object.assign(guard, { x: p.x, y: p.y });
@@ -192,7 +204,7 @@ test("el jaguar fija la dirección al avisar y su salto se detiene ante un muro"
   place(p, { x: 7.5, y: 9 });
   assert.deepEqual(guard.attack.end, aim);
   g.map.cells[6][9] = "#";
-  for (let i = 0; i < 110; i++) {
+  for (let i = 0; i < 250 && guard.state !== GuardState.RECOVER; i++) {
     updateGuard(guard, g, 0.01);
     assert.ok(canOccupy(g.map, guard.x, guard.y));
   }
@@ -209,7 +221,7 @@ test("el ataque no se inicia a través de paredes", () => {
 });
 
 test("las trampas avisan antes de frenar y el impulso permite cruzarlas", () => {
-  const g = fixture(2),
+  const g = fixture(4),
     trap = g.traps[0],
     p = g.players[0];
   place(p, trap);

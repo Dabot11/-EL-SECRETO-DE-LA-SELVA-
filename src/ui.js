@@ -402,9 +402,9 @@ export class UI {
                 ? "¡Vuelve a la entrada!"
                 : "¡Regresen juntos a la entrada!"
               : g.flag.state === FlagState.DROPPED
-                ? "Recupera la reliquia caída"
+                ? "Recupera la bandera caída"
                 : g.sealOpen()
-                  ? "¡Busca la reliquia!"
+                  ? "¡Busca la bandera!"
                   : "Activa las runas de jade";
     $("flag-status").textContent =
       bridgeStep === 1
@@ -420,13 +420,19 @@ export class UI {
                 ? "◆ La llevas contigo · el campamento ya no cura"
                 : `◆ La lleva ${g.flag.carrier === 0 ? "azul · F" : "rojo · L"} para pasar`
               : g.sealOpen()
-                ? "◆ Sello abierto · contacto o liana para recoger"
+                ? g.runes.length === 0
+                  ? "◆ Toca la bandera y vuelve a la entrada"
+                  : "◆ Sello abierto · contacto o liana para recoger"
                 : "◆ Quédate cerca de cada runa para activarla";
-    $("rune-count").textContent = bridge
-      ? bridge.open
-        ? "◇ PUENTE ABIERTO"
-        : `◇ PUENTE · PASO ${bridgeStep}/3`
-      : `◇ RUNAS ${g.runes.filter((r) => r.active).length}/${g.runes.length}`;
+    $("rune-count").textContent = g.alarm
+      ? g.alarmActive
+        ? "⚑ CRUCES VIGILADOS"
+        : `⚑ ALERTA EN ${Math.ceil(g.alarmTimer)}s`
+      : bridgeStep
+        ? `◇ PUENTE · PASO ${bridgeStep}/3`
+        : g.runes.length
+          ? `◇ RUNAS ${g.runes.filter((r) => r.active).length}/${g.runes.length}`
+          : "⚑ BANDERA LIBRE";
     $("relic-count").textContent =
       `✦ TESOROS ${g.relics.filter((r) => r.collected).length}/3`;
     $("mission-clock").textContent = formatTime(g.stats.time);
@@ -500,10 +506,10 @@ export class UI {
               : "Aventura en pausa";
         $("state-description").textContent = won
           ? solo
-            ? `¡${MISSIONS.length} reliquias recuperadas con tu ingenio y tus dos herramientas!`
-            : `¡${MISSIONS.length} reliquias recuperadas en equipo!`
+            ? `¡${MISSIONS.length} banderas recuperadas con tu ingenio y tus dos herramientas!`
+            : `¡${MISSIONS.length} banderas recuperadas en equipo!`
           : completed
-            ? `¡Reliquia recuperada! Sigue ${MISSIONS[g.missionIndex + 1].name}, con ${solo ? "tres corazones" : "tres nuevos intentos"}.`
+            ? `¡Bandera recuperada! Sigue ${MISSIONS[g.missionIndex + 1].name}, con ${solo ? "tres corazones" : "tres nuevos intentos"}.`
             : lost
               ? `${solo ? "Puedes" : "Pueden"} reintentar ${g.map.mission.name} desde el comienzo de esta misión.`
               : solo

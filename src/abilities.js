@@ -157,7 +157,7 @@ export function passFlag(game, player) {
   const receiver = game.players.find((p) => p.id !== player.id && free(p));
   if (!receiver || !visible(game, player, receiver, CONFIG.passRange)) {
     game.notify(
-      "Acérquense y busquen una línea libre de muros para pasar la reliquia.",
+      "Acérquense y busquen una línea libre de muros para pasar la bandera.",
     );
     return false;
   }

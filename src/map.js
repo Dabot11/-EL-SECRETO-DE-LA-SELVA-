@@ -81,7 +81,16 @@ export function createMap(index = 0, mode = 2) {
           tiles: mission.bridge.tiles.flatMap(region),
         }
       : null,
-    patrols: mission.patrols.map((p) => ({ ...p, route: p.route.map(point) })),
+    patrols: mission.patrols
+      .slice(0, mission.enemyTypes.length)
+      .map((p, id) => ({
+        ...p,
+        route: p.route.map(point),
+        alarmRoute: [...p.route]
+          .reverse()
+          .concat([mission.escapePosts[id]])
+          .map(point),
+      })),
   };
   const base = world({ x: 2.5, y: 11.5 });
   return {

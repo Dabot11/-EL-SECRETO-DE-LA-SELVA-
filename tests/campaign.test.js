@@ -107,7 +107,7 @@ test("avanzar exige completar la misión y restaura intentos, bandera y guardias
     if (i < MISSIONS.length - 1) {
       assert.equal(g.attempts, 3);
       assert.equal(g.flag.state, FlagState.ON_PEDESTAL);
-      assert.equal(g.guards.length, MISSIONS[i + 1].patrols.length);
+      assert.equal(g.guards.length, g.map.patrols.length);
     }
   }
   g.menu();

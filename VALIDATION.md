@@ -1,16 +1,16 @@
-# Verificación · versión 5.5
+# Verificación · versión 5.6
 
 Node.js 24.19.0, Python 3.12.14 y Chromium 154.0.8037.57 en Linux.
 
 | Comprobación        | Resultado                                                                                                                                                                                                             |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm test`          | 98 pruebas de reglas, regresión, guardado y recorridos                                                                                                                                                                |
-| Prueba de navegador | 193 comprobaciones con Chromium                                                                                                                                                                                       |
+| `npm test`          | 106 pruebas de reglas, regresión, guardado y recorridos                                                                                                                                                               |
+| Prueba de navegador | 199 comprobaciones con Chromium                                                                                                                                                                                       |
 | Campaña             | Diez misiones × dos modalidades × con/sin tres tesoros: cuarenta escenarios terminados                                                                                                                                |
 | Solo                | Un personaje, tres corazones, protección entre golpes, curación interrumpible, alarma que impide curarse, derrota y reintento                                                                                         |
 | Dúo                 | Roles, combo, pases en ambos sentidos, recarga, paredes, distancia, receptor capturado, caída y rescate                                                                                                               |
 | Burbuja             | Movimiento lento sin herramientas ni impulso, liana por suelo transitable y canal de rescate                                                                                                                          |
-| Puente              | Isla inaccesible al inicio; salto real carga estatua; luz con caducidad; liana abre ambos pasos; reintento restaura el cierre                                                                                         |
+| Puente              | Misión 6: zona norte inaccesible al inicio; salto real carga estatua; luz con caducidad; liana abre ambos pasos; reintento restaura el cierre                                                                         |
 | Cuadrícula          | Centros exactos, vecinos cardinales, giro pendiente, repetición, impulso de una casilla, animación y pausa                                                                                                            |
 | Cámara y mapas      | Proyección rectangular de cuadrados; diez mapas de 28 × 20, objetivos y patrullas alcanzables                                                                                                                         |
 | Ataques             | Casillas avisadas iguales a las de daño; jaguar alineado, pasos cardinales y parada ante obstáculos                                                                                                                   |
@@ -37,6 +37,17 @@ CHROMIUM_PATH=/usr/bin/chromium python3 tests/browser_smoke.py
 El navegador usa clics y eventos de teclado reales para controles. Los recorridos completos se dirigen mediante entradas de `Game.update`; no son una grabación de pulsaciones físicas. Las pruebas aisladas preparan posiciones controladas para comprobar una regla, separadas de las campañas completas sin alteraciones de posición o protección.
 
 Las capturas y el informe JSON se generan en `test-results/`, ignorado por Git. Se inspeccionan menú, ayuda, solo, dúo, puente, combos, pases y resultados. El servidor local verifica comportamiento; GitHub Actions vuelve a ejecutar las pruebas de Node antes de publicar. El despliegue se contrasta aparte con los archivos del sitio público.
+
+## Verificación de la progresión y el regreso
+
+- Una novedad por misión en los primeros siete niveles: centinela, runa, jaguar, espíritu, trampa, mecanismo y Solar. Los niveles 8–10 combinan lo aprendido.
+- Las dos primeras misiones se completan en ambos modos solo con movimiento, sin luz, liana, impulso ni pases. La bandera y el regreso siguen siendo obligatorios.
+- Avisos y recuperación más generosos al principio; en todas las misiones solo ofrece más tiempo de reacción y recuperación. La persecución con alarma queda por debajo de la velocidad del portador.
+- Puntos de vigilancia alcanzables y separados de la entrada. El cambio de patrullas conserva pasos, aturdimientos, casillas de ataque y temporizadores; no revela al portador escondido.
+- El aviso de alarma se pausa con la partida. Pasar o recuperar una bandera caída no reinicia la cuenta. Reintentar restaura rutas, mecanismo, objetivos y alarma.
+- El navegador comprueba la bandera libre inicial, el contador de alarma, el cambio real de rutas, la restauración al reintentar y las runas pendientes después de abrir el puente de la misión 6.
+- Cuarenta comprobaciones visuales de HUD: las diez misiones, ambos modos, a 1366×768 y 1280×600. Objetivo, aviso, contador y botones caben sin superponerse. Se revisan las capturas de las misiones 1, 6 y 10 y del regreso con alarma; la bandera tiene una silueta propia con mástil. Informe: `test-results/progression-layout.json`.
+- Los cuarenta escenarios de lógica y los veinte recorridos de navegador completan el regreso con guardianes activos. El puente se abre mediante una embestida real y herramientas en solo y dúo.
 
 ## Verificación de las animaciones de enemigos
 
@@ -88,4 +99,4 @@ Las capturas y el informe JSON se generan en `test-results/`, ignorado por Git. 
 
 ## Límites
 
-Las pruebas comprueban reglas, rutas y presentación; la diversión y dificultad necesitan prueba con David y Tavito. Esta versión extiende las animaciones direccionales a los cuatro enemigos y conserva las diez misiones sin modificar el balance; la dificultad sigue creciendo mediante velocidades, detección, patrullas y distribución de objetivos. Safari y Firefox no se probaron. La vista estrecha se adapta, pero el juego requiere teclado. El guardado sigue siendo local y Continuar reinicia la misión pendiente. La prueba de audio verifica síntesis y volumen, no una evaluación auditiva humana.
+Las pruebas comprueban reglas, rutas y presentación; la diversión y dificultad necesitan prueba con David y Tavito. Esta versión rebalancea las diez misiones y añade rutas de regreso tras la alarma. Las pruebas no determinan si la dificultad resulta adecuada o divertida para Tavito; esa valoración requiere jugar con él. Safari y Firefox no se probaron. La vista estrecha se adapta, pero el juego requiere teclado. El guardado sigue siendo local y Continuar reinicia la misión pendiente. La prueba de audio verifica síntesis y volumen, no una evaluación auditiva humana.

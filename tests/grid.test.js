@@ -218,7 +218,11 @@ test("la embestida avanza un cuadro por vez y nunca rebasa los cuadros anunciado
   const marked = guard.attack.cells.map((c) => ({ ...c }));
   p.y = 10.5;
   let before = { ...guard };
-  for (let i = 0; i < 150; i++) {
+  for (
+    let i = 0, steps = Math.ceil((guard.attack.duration + 0.6) * 100);
+    i < steps;
+    i++
+  ) {
     updateGuard(guard, g, 0.01);
     assert.ok(Math.abs(guard.x - before.x) + Math.abs(guard.y - before.y) <= 1);
     assert.ok(marked.some((c) => sameTile(c, guard)));
@@ -247,7 +251,12 @@ for (const type of ["stone", "spirit", "warden"])
     assert.equal(guard.state, GuardState.WINDUP);
     assert.ok(attackHits(guard.attack, g.players[0]));
     assert.ok(!attackHits(guard.attack, g.players[1]));
-    for (let i = 0; i < 135; i++) updateGuard(guard, g, 0.01);
+    for (
+      let i = 0, steps = Math.ceil(guard.attack.duration * 100) + 2;
+      i < steps;
+      i++
+    )
+      updateGuard(guard, g, 0.01);
     assert.equal(g.players[0].state, PlayerState.CAPTURED);
     assert.notEqual(g.players[1].state, PlayerState.CAPTURED);
   });
@@ -317,6 +326,11 @@ test("la casilla inicial del jaguar también golpea al terminar el aviso", () =>
   updateGuard(guard, g, 0.01);
   assert.equal(guard.state, GuardState.WINDUP);
   assert.ok(attackHits(guard.attack, p));
-  for (let i = 0; i < 87; i++) updateGuard(guard, g, 0.01);
+  for (
+    let i = 0, steps = Math.ceil(guard.attack.duration * 100) + 2;
+    i < steps;
+    i++
+  )
+    updateGuard(guard, g, 0.01);
   assert.equal(p.state, PlayerState.CAPTURED);
 });

@@ -2,7 +2,7 @@
 
 Una aventura de **David y Tavito**, para uno o dos jugadores en la misma computadora.
 
-**Versión 5.5:** los cuatro enemigos también tienen frente, espalda y perfiles con ciclos propios: pasos de piedra, zancadas del jaguar y estela animada del espíritu. Se orientan con cada paso; el jaguar mira hacia su salto anunciado y los guardianes dejan de caminar al preparar un ataque o quedar aturdidos. Los dos exploradores conservan su caminata direccional.
+**Versión 5.6:** diez misiones con dificultad progresiva, siempre para capturar la bandera y volver a la entrada. La primera empieza con centinelas lentos y la bandera libre; las siguientes presentan runas, jaguar, espíritu, trampas, el puente y el Guardián Solar por separado. Al recoger la bandera, una cuenta visible anuncia que las patrullas van a vigilar los cruces. Solo ofrece más tiempo para reaccionar; en dúo ayudan los pases, las distracciones y los rescates.
 
 Los enemigos, sus patrullas y sus embestidas también avanzan por casillas. Los avisos muestran los cuadros que puede golpear cada ataque. La cámara mantiene el mapa completo visible para ambos jugadores.
 
@@ -19,7 +19,7 @@ Al iniciar una partida en laptop, el tablero ocupa toda la ventana y se ajusta a
 - La campaña muestra una miniatura de la geometría de cada destino, su dificultad, disponibilidad y récords.
 - El panel separa misión, etapas **Abre → Recoge → Vuelve**, vidas y habilidades. Cada herramienta muestra su tecla, cuenta regresiva y barra de recarga; el pase se habilita visualmente para el portador.
 - Suelos con variaciones, piedra agrietada, musgo, puentes con tablones y orillas sombreadas. Cada región mantiene su propia paleta.
-- Los exploradores usan 24 dibujos: frente, espalda y perfil, con cuatro poses por vista y color; el perfil izquierdo refleja el derecho. El ciclo alterna piernas por casilla y conserva su ritmo al llevar la reliquia, ralentizarse o usar el impulso. La cabeza mantiene un anclaje estable.
+- Los exploradores usan 24 dibujos: frente, espalda y perfil, con cuatro poses por vista y color; el perfil izquierdo refleja el derecho. El ciclo alterna piernas por casilla y conserva su ritmo al llevar la bandera, ralentizarse o usar el impulso. La cabeza mantiene un anclaje estable.
 - Pasos con movimiento de piernas y polvo, estelas de impulso, anticipación de ataques, espíritus flotantes, vegetación, agua y antorchas animadas. Los avisos de ataque se dibujan sobre la vegetación y conservan sus casillas exactas.
 - Efectos y mensajes breves distintos para runas, tesoros, combos, golpes, curación y rescates.
 - La pausa congela también el escenario. Se respeta **Reducir movimiento** del sistema: desaparecen balanceos, estelas y partículas decorativas; los controles y avisos esenciales siguen funcionando.
@@ -40,16 +40,16 @@ Alternativa: `python3 -m http.server 8080` —o `py -m http.server 8080` en Wind
 
 ## Elegir modalidad
 
-|              | Solo                                                                           | Dos jugadores                                                              |
-| ------------ | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| Personajes   | Un explorador, sin compañero automático                                        | Azul y rojo, controlados por personas                                      |
-| Herramientas | El explorador tiene linterna y liana                                           | Azul lleva linterna; rojo lleva liana                                      |
-| Daño         | Tres corazones, con 1,7 s de protección tras un golpe                          | Una captura te encierra en una burbuja que puedes mover                    |
-| Recuperación | Descansa 2 s en la entrada antes de tomar la reliquia para recuperar corazones | Acérquense durante 0,6 s para rescatar; la liana puede acercar una burbuja |
-| Derrota      | Perder los tres corazones                                                      | Agotar tres intentos; solo se gasta uno si ambos están atrapados           |
-| Victoria     | Volver a la entrada con la reliquia                                            | Ambos libres en la entrada, con la reliquia                                |
+|              | Solo                                                                          | Dos jugadores                                                              |
+| ------------ | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Personajes   | Un explorador, sin compañero automático                                       | Azul y rojo, controlados por personas                                      |
+| Herramientas | El explorador tiene linterna y liana                                          | Azul lleva linterna; rojo lleva liana                                      |
+| Daño         | Tres corazones, con 1,7 s de protección tras un golpe                         | Una captura te encierra en una burbuja que puedes mover                    |
+| Recuperación | Descansa 2 s en la entrada antes de tomar la bandera para recuperar corazones | Acérquense durante 0,6 s para rescatar; la liana puede acercar una burbuja |
+| Derrota      | Perder los tres corazones                                                     | Agotar tres intentos; solo se gasta uno si ambos están atrapados           |
+| Victoria     | Volver a la entrada con la bandera                                            | Ambos libres en la entrada, con la bandera                                 |
 
-Reintentar reinicia la misión actual y restaura corazones o intentos. En solitario hay un guardián menos por mapa, caminan un 8 % más lento y avisan sus ataques un 15 % más de tiempo. El Guardián Solar sigue presente en el último mapa.
+Reintentar reinicia la misión actual y restaura corazones o intentos. En solitario hay un guardián menos por mapa, caminan un 8 % más lento y avisan sus ataques un 25 % más de tiempo, con un 10 % más de recuperación. El Guardián Solar sigue presente en el último mapa.
 
 ## Controles
 
@@ -59,7 +59,7 @@ Reintentar reinicia la misión actual y restaura corazones o intentos. En solita
 | Impulso al moverse         | Espacio               | Shift derecho |
 | Linterna                   | E                     | —             |
 | Liana                      | Q, solo en individual | Enter         |
-| Pasar la reliquia          | F, solo en dúo        | L             |
+| Pasar la bandera           | F, solo en dúo        | L             |
 | Pausar o continuar         | Escape o P            | Escape o P    |
 
 Una pulsación mueve **un cuadro completo** hacia arriba, abajo, izquierda o derecha. Mantener la tecla encadena pasos. Si pulsas otra dirección durante un paso, el giro espera al siguiente cuadro. Si sostienes dos teclas, manda la última que pulsaste. No hay diagonales ni deslizamientos por las esquinas.
@@ -69,29 +69,31 @@ El **impulso** es un paso rápido de una casilla, con protección durante ese pa
 ## Luz, liana y cooperación
 
 - La **linterna** interrumpe a guardianes próximos y los marca. La **liana sobre un guardián marcado** lo inmoviliza durante 2,2 s: en solitario encadenas E y Q; en dúo coordinas E y Enter.
-- La liana también recupera tesoros y la reliquia cuando su sello está abierto. Prioriza rescatar a un cautivo, abrir un mecanismo iluminado y completar un combo antes de buscar objetos. Los muros bloquean herramientas y pases.
-- En dúo, el portador tarda más entre pasos: su velocidad baja un 22 % y atrae más la atención de los guardianes. **F / L** pasa la reliquia al compañero a hasta cuatro casillas, incluso sobre agua. El receptor obtiene 0,45 s de protección; entre pases hay 0,8 s de espera. En solitario la penalización al cargar es del 7 %.
+- La liana también recupera tesoros y la bandera cuando su sello está abierto. Prioriza rescatar a un cautivo, abrir un mecanismo iluminado y completar un combo antes de buscar objetos. Los muros bloquean herramientas y pases.
+- En dúo, el portador tarda más entre pasos: su velocidad baja un 22 % y atrae más la atención de los guardianes. **F / L** pasa la bandera al compañero a hasta cuatro casillas, incluso sobre agua. El receptor obtiene 0,45 s de protección; entre pases hay 0,8 s de espera. En solitario la penalización al cargar es del 7 %.
 - Una burbuja puede rodar casilla por casilla, lentamente y por suelo transitable, sin herramientas ni impulso. Rojo puede acercar la burbuja azul con la liana cuando hay un camino libre. Azul puede interrumpir al guardián con luz para acercarse a rescatar al rojo. Permanecer juntos 0,6 s completa el rescate; alejarse interrumpe la barra.
-- El rescatado recibe 1,5 s de protección y quien lo libera 0,8 s. Capturar al portador en dúo deja la reliquia en el suelo; en solitario un golpe consume un corazón y se conserva la reliquia.
+- El rescatado recibe 1,5 s de protección y quien lo libera 0,8 s. Capturar al portador en dúo deja la bandera en el suelo; en solitario un golpe consume un corazón y se conserva la bandera.
 
 ## Diez misiones
 
-| #   | Misión                      | Objetivo                                                                                          | Guardianes solo / dúo |
-| --- | --------------------------- | ------------------------------------------------------------------------------------------------- | --------------------- |
-| 1   | El Puente del Jaguar        | Atraer un salto hacia la estatua, iluminar el mecanismo y tirar con la liana para abrir los pasos | 2 / 3                 |
-| 2   | Los Puentes del Río         | Dos runas a ambos lados del río y cruces con niebla                                               | 2 / 3                 |
-| 3   | El Jardín de las Estatuas   | Dos runas, senderos entre columnas y esporas                                                      | 3 / 4                 |
-| 4   | Las Ruinas de la Luna       | Tres runas, canales y espíritus                                                                   | 4 / 5                 |
-| 5   | El Santuario del Sol        | Tres runas, dos ríos y el Guardián Solar                                                          | 5 / 6                 |
-| 6   | El Pantano de la Niebla     | Tres runas, tres orillas y cruces alternativos entre niebla                                       | 5 / 6                 |
-| 7   | Las Canteras del Ámbar      | Tres runas, corredores entre muros y esporas                                                      | 6 / 7                 |
-| 8   | La Laguna de Cristal        | Cuatro runas repartidas entre islas y pasos con hielo                                             | 6 / 7                 |
-| 9   | La Fortaleza de las Espinas | Cuatro runas exteriores, puertas vigiladas y un patio central                                     | 7 / 8                 |
-| 10  | El Corazón de la Selva      | Cuatro runas, una isla central con cuatro accesos y dos Guardianes Solares                        | 8 / 9                 |
+| #   | Misión                      | Objetivo                                                         | Guardianes solo / dúo |
+| --- | --------------------------- | ---------------------------------------------------------------- | --------------------- |
+| 1   | La Primera Bandera          | Bandera libre, centinelas lentos; aprender a caminar y esquivar  | 1 / 2                 |
+| 2   | Los Puentes del Río         | Una runa y varios cruces; aprender a liberar la bandera          | 2 / 3                 |
+| 3   | El Jardín de las Estatuas   | Dos runas y primera embestida del jaguar                         | 3 / 4                 |
+| 4   | Las Ruinas de la Luna       | Dos runas y primer pulso del espíritu                            | 3 / 4                 |
+| 5   | El Santuario del Sol        | Tres runas; aparecen trampas de suelo que avisan antes de frenar | 4 / 5                 |
+| 6   | El Pantano de la Niebla     | Estatua del jaguar, luz y liana para abrir el puente; tres runas | 5 / 6                 |
+| 7   | Las Canteras del Ámbar      | Tres runas; aparece el gran golpe del Guardián Solar             | 6 / 7                 |
+| 8   | La Laguna de Cristal        | Cuatro runas, islas y elección de cruces durante la huida        | 6 / 7                 |
+| 9   | La Fortaleza de las Espinas | Cuatro runas exteriores, patrullas y trampas en los accesos      | 7 / 8                 |
+| 10  | El Corazón de la Selva      | Cuatro runas, cuatro accesos y dos Guardianes Solares            | 8 / 9                 |
 
-En la primera misión, coloca la estatua entre el jaguar y tú: cuando aparezca la dirección de su salto, esquiva a un lado. Tras el impacto, acércate al mecanismo del puente. Ilumínalo y usa la liana antes de que se apague: tienes 8 s en solitario y 4 s en dúo. La estatua permanece cargada hasta reiniciar el intento.
+En la sexta misión, coloca la estatua entre el jaguar y tú: cuando aparezca la dirección de su salto, esquiva a un lado. Tras el impacto, acércate al mecanismo del puente. Ilumínalo y usa la liana antes de que se apague: tienes 8 s en solitario y 4 s en dúo. La estatua permanece cargada hasta reiniciar el intento. Después activa las runas que faltan.
 
-En los otros mapas, permanece 0,65 s cerca de cada runa para abrir el sello. Los tres tesoros dorados por misión son opcionales. Después recupera la reliquia y regresa a la entrada. Tomarla activa una alarma: aumenta la persecución y acelera la música; el campamento deja de curar.
+Las runas se activan al permanecer 0,65 s cerca. La primera misión no tiene sello; desde la segunda hay que activar todas las runas. Los tres tesoros dorados por misión son opcionales. Después captura la bandera y regresa a la entrada.
+
+Al tomarla comienza la música de alarma y el campamento deja de curar. El HUD muestra el tiempo antes de que cambien las patrullas: de 2,4 s en la misión 1 a 1,5 s en la 10, con 0,4 s adicionales en solitario. Los guardianes se desplazan a cruces definidos del mapa y aumentan un poco su persecución. Los muros y arbustos siguen sirviendo para perderlos; la entrada conserva su protección. Pasar o recuperar una bandera caída mantiene la alarma en marcha.
 
 Los arbustos ocultan automáticamente. Los guardianes anuncian los ataques en el suelo, se recuperan después y persiguen dentro de su territorio. El centinela marca una cruz corta, el jaguar se alinea y recorre hasta tres cuadros en una fila o columna, el espíritu marca un área de hasta dos pasos y el Solar prepara una zona cuadrada de hasta 5 × 5. Los muros bloquean los avisos y los golpes. Las trampas avisan antes de frenar. No hay límite de tiempo.
 
@@ -125,4 +127,4 @@ El workflow `.github/workflows/pages.yml` prueba y publica los cambios de `main`
 
 ## Organización
 
-`src/game.js` coordina la partida; `abilities.js` resuelve herramientas y pases; `ai.js` controla guardianes. `missions.js`, `challenges.js` y `map.js` definen geometría y objetivos. `grid.js` limita los pasos a vecinos cardinales y anima la transición; `collisions.js` y `navigation.js` gestionan obstáculos y rutas. `renderer.js`, `terrain.js` y `sprites.js` dibujan; `explorer-sprites.js` carga y alinea las poses de `assets/explorer-walk.png`, y `explorer-animation.js` sincroniza orientación y piernas con cada paso; `enemy-sprites.js` carga por separado los cuatro atlas de enemigos y `enemy-animation.js` sincroniza sus vistas con patrullas, ataques y estados; `input.js` y `ui.js` conectan teclado e interfaz. `progress.js` guarda el avance; `audio.js` sintetiza la música y los efectos.
+`src/game.js` coordina la partida; `abilities.js` resuelve herramientas y pases; `ai.js` controla guardianes. `missions.js`, `challenges.js` y `map.js` definen geometría y objetivos; `difficulty.js` concentra los tiempos, la velocidad y los puntos de vigilancia del regreso. `grid.js` limita los pasos a vecinos cardinales y anima la transición; `collisions.js` y `navigation.js` gestionan obstáculos y rutas. `renderer.js`, `terrain.js` y `sprites.js` dibujan; `explorer-sprites.js` carga y alinea las poses de `assets/explorer-walk.png`, y `explorer-animation.js` sincroniza orientación y piernas con cada paso; `enemy-sprites.js` carga por separado los cuatro atlas de enemigos y `enemy-animation.js` sincroniza sus vistas con patrullas, ataques y estados; `input.js` y `ui.js` conectan teclado e interfaz. `progress.js` guarda el avance; `audio.js` sintetiza la música y los efectos.

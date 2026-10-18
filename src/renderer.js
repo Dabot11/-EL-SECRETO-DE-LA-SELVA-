@@ -139,11 +139,26 @@ export class Renderer {
     c.save();
     c.translate(x, y);
     if (small) c.scale(0.65, 0.65);
-    this.diamond(0, -13, 10, 12, "#edc66e", "#fff1b9");
-    this.diamond(0, -13, 6, 8, "#248b74", "#a3f3c7");
-    this.rect(-4, -16, 2, 2, "#fff0b4");
-    this.rect(2, -16, 2, 2, "#fff0b4");
-    this.rect(-7, -2, 14, 3, "#ebc56e");
+    const wave = this.reducedMotion.matches
+      ? 0
+      : Math.round(Math.sin(this.time * 4) * 1.5);
+    this.rect(-7, -25, 2, 26, "#edc66e");
+    this.rect(-8, -27, 4, 3, "#fff1b9");
+    this.poly(
+      [
+        [-5, -24],
+        [4, -24 + wave],
+        [12, -23 + wave],
+        [9, -17 + wave],
+        [12, -12 + wave],
+        [4, -13 + wave],
+        [-5, -13],
+      ],
+      "#248b74",
+      "#f4d78d",
+    );
+    this.diamond(2, -19 + wave, 3, 3, "#ffe5a3");
+    this.rect(-10, 0, 8, 2, "#ebc56e");
     c.restore();
   }
   cacheFloor(map) {
@@ -503,6 +518,7 @@ export class Renderer {
       this.text("···", s.x, s.y - 29, "#d3e5c5", 10);
     else if (g.state === GuardState.CHASE)
       this.text("!", s.x, s.y - 29, "#ffb488", 10);
+    else if (g.alarmSignal > 0) this.text("↻", s.x, s.y - 29, "#ffe199", 12);
     if (g.markedTime > 0) this.text("◇", s.x + 14, s.y - 26, "#ffec9a", 12);
   }
   consume(events) {
@@ -523,7 +539,7 @@ export class Renderer {
       pass: { color: "#ffe199", count: 8 },
       light: { color: "#fff3b8", count: 14 },
       trap: { color: "#9bd5cb", count: 6 },
-      victory: { color: "#ffe199", label: "¡RELIQUIA A SALVO!", count: 40 },
+      victory: { color: "#ffe199", label: "¡BANDERA A SALVO!", count: 40 },
     };
     for (const e of events) {
       if (e.type === "start" || e.type === "round") {
@@ -697,7 +713,7 @@ export class Renderer {
       if (game.flag.state === FlagState.ON_PEDESTAL) {
         this.flag(s.x, s.y + 1 + Math.sin(this.time * 2.5) * 1.5);
         this.text(
-          game.sealOpen() ? "RELIQUIA" : "SELLADA",
+          game.sealOpen() ? "BANDERA" : "SELLADA",
           s.x,
           s.y - 30,
           "#ffe6a2",

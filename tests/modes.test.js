@@ -191,8 +191,8 @@ test("las herramientas no actúan durante pausa, derrota ni captura", () => {
   assert.equal(g.useVine(g.players[1]), false);
 });
 test("el puente sella la isla; solo el salto del jaguar carga la estatua", () => {
-  const g = fixture(),
-    guard = g.guards[0],
+  const g = fixture(2, 5),
+    guard = g.guards[2],
     statue = g.bridge.statue;
   assert.equal(findPath(g.map, g.map.base, g.map.pedestal).length, 0);
   assert.equal(
@@ -213,14 +213,14 @@ test("el puente sella la isla; solo el salto del jaguar carga la estatua", () =>
   });
   place(g.players[0], statue.x + 0.1, statue.y);
   place(g.players[1], g.map.base.x, g.map.base.y);
-  for (let i = 0; i < 70; i++) updateGuard(guard, g, 1 / 60);
+  for (let i = 0; i < 100; i++) updateGuard(guard, g, 1 / 60);
   assert.equal(g.bridge.charged, true);
   assert.equal(g.bridge.open, false);
   assert.equal(g.stats.captures, 0);
 });
 test("abrir exige estatua cargada, luz vigente y liana; ambos modos pueden hacerlo", () => {
   for (const mode of [1, 2]) {
-    const g = fixture(mode);
+    const g = fixture(mode, 5);
     g.guards = [];
     for (const p of g.players) place(p, g.bridge.winch.x, g.bridge.winch.y);
     const blue = g.players[0],
@@ -352,7 +352,7 @@ test("la liana no arrastra burbujas a través del agua ni de paredes", () => {
   }
 });
 test("rescatar tiene prioridad sobre un mecanismo sin activar", () => {
-  const g = fixture();
+  const g = fixture(2, 5);
   g.guards = [];
   const w = g.bridge.winch;
   place(g.players[0], w.x - 1, w.y);
@@ -407,7 +407,7 @@ test("migra desbloqueos y misión v3, conserva su copia y separa los récords v4
 });
 
 test("un mecanismo cerrado y un tesoro no roban el combo de un guardián marcado", () => {
-  const g = fixture();
+  const g = fixture(2, 5);
   const [blue, red] = g.players;
   const w = g.bridge.winch;
   place(blue, w.x - 1, w.y);

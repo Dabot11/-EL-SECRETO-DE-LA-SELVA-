@@ -1,5 +1,5 @@
 import { EXTRA_MISSIONS, EXTRA_THEMES } from "./expansion.js";
-// Ten authored layouts. The first mission introduces mode-specific cooperation.
+// Ten authored layouts. New challenges are introduced one mission at a time.
 const column = (x, ys) => ys.map((y) => [x, y]);
 const row = (y, xs) => xs.map((x) => [x, y]);
 const range = (start, end) =>
@@ -7,15 +7,10 @@ const range = (start, end) =>
 const patrol = (type, route) => ({ type, route });
 export const MISSIONS = [
   {
-    name: "El Puente del Jaguar",
-    subtitle: "Luz, liana y un salto de fe",
+    name: "La Primera Bandera",
+    subtitle: "Captura, esquiva y vuelve",
     theme: "jungle",
-    briefing:
-      "Atrae al jaguar hacia la estatua y abre el puente con luz y liana.",
     difficulty: 1,
-    speed: 33,
-    detection: 3.5,
-    search: 2,
     water: column(8, range(1, 12)),
     bridges: [
       [8, 4],
@@ -73,34 +68,24 @@ export const MISSIONS = [
     pedestal: [14, 2],
     patrols: [
       patrol("stone", [
+        [10, 4],
+        [12, 4],
+        [12, 2],
+        [15, 2],
+      ]),
+      patrol("stone", [
         [5, 5],
         [7, 5],
         [7, 8],
         [5, 8],
       ]),
-      patrol("stone", [
-        [12, 2],
-        [15, 2],
-        [15, 4],
-        [12, 4],
-      ]),
-      patrol("spirit", [
-        [9, 7],
-        [13, 7],
-        [13, 11],
-        [9, 11],
-      ]),
     ],
   },
   {
     name: "Los Puentes del Río",
-    subtitle: "Al otro lado de la corriente",
+    subtitle: "Una runa, varios caminos",
     theme: "river",
-    briefing: "Dos puentes, dos rutas. Elige el cruce cuando pase la patrulla.",
     difficulty: 2,
-    speed: 35,
-    detection: 3.8,
-    search: 2.25,
     water: row(7, range(1, 16)),
     bridges: [
       [3, 7],
@@ -170,14 +155,9 @@ export const MISSIONS = [
   },
   {
     name: "El Jardín de las Estatuas",
-    subtitle: "Nada es lo que parece",
+    subtitle: "Aprende a esquivar al jaguar",
     theme: "garden",
-    briefing:
-      "Las estatuas vigilan los senderos. Piérdelas de vista tras las ruinas.",
     difficulty: 3,
-    speed: 37,
-    detection: 4.05,
-    search: 2.5,
     water: [
       [8, 2],
       [9, 2],
@@ -261,14 +241,9 @@ export const MISSIONS = [
   },
   {
     name: "Las Ruinas de la Luna",
-    subtitle: "Luces entre las sombras",
+    subtitle: "Escapa del pulso del espíritu",
     theme: "moon",
-    briefing:
-      "Sigue las antorchas. Los espíritus recorren ambos lados del canal.",
     difficulty: 4,
-    speed: 39,
-    detection: 4.3,
-    search: 2.75,
     water: [...column(7, range(1, 12)), ...row(6, range(8, 16))],
     bridges: [
       [7, 3],
@@ -362,14 +337,9 @@ export const MISSIONS = [
   },
   {
     name: "El Santuario del Sol",
-    subtitle: "El umbral de una nueva aventura",
+    subtitle: "Trampas y rutas alternativas",
     theme: "sun",
-    briefing:
-      "El santuario reúne a todos los guardianes. Recupera su reliquia y sigue hacia el pantano.",
     difficulty: 5,
-    speed: 41,
-    detection: 4.5,
-    search: 3,
     water: [...column(6, range(1, 12)), ...column(12, range(1, 12))],
     bridges: [
       [6, 3],

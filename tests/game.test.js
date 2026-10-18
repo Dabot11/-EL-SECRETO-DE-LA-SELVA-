@@ -55,13 +55,13 @@ function tick(g, seconds, inputs) {
 
 test("el mapa ampliado conserva arbustos y dos cruces independientes tras abrir el mecanismo", () => {
   const g = game();
+  g.start(2, 5);
   g.openBridge();
   const map = g.map;
   assert.equal(map.bushGroups.length, 7);
-  const rows = [...new Set(g.bridge.tiles.map((t) => t[1]))];
   for (const upper of [true, false]) {
     const cells = g.bridge.tiles.filter((t) =>
-      upper ? t[1] < 10 : t[1] >= 10,
+      upper ? t[0] < 15 : t[0] >= 15,
     );
     for (const [x, y] of cells) map.cells[y][x] = TILE.WATER;
     assert.ok(findPath(map, map.base, map.pedestal).length);
@@ -214,7 +214,7 @@ test("un golpe anunciado captura y permite rodar sin gastar un intento", () => {
   Object.assign(g.guards[0], { x: 5.5, y: 5.5, attackCooldown: 0 });
   g.update(0.01);
   assert.notEqual(g.players[0].state, PlayerState.CAPTURED);
-  tick(g, 0.9);
+  tick(g, g.guards[0].attack.duration + 0.05);
   assert.equal(g.players[0].state, PlayerState.CAPTURED);
   assert.equal(g.attempts, 3);
   const before = { ...g.players[0] };
@@ -405,10 +405,10 @@ test("la navegación física recorre ida y vuelta sin atascarse ni atravesar obs
 
 for (const mode of [1, 2])
   test(`partida completa, modo ${mode}: estatua, herramientas, evasión, reliquia y victoria con guardianes activos`, () => {
-    const result = playJourney(new Game(), mode);
+    const result = playJourney(new Game(), mode, 5);
     assert.equal(result.state, GameState.MISSION_COMPLETE);
     assert.ok(result.attempts > 0);
-    assert.equal(result.runes, 0);
+    assert.equal(result.runes, 3);
     assert.equal(result.bridge, true);
     assert.ok(result.dashes > 0);
     assert.ok(result.flags > 0);

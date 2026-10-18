@@ -1,70 +1,53 @@
-# Diseño y balance · versión 5.2
+# Diseño y balance · versión 5.6
 
-La campaña incorpora cinco mapas nuevos y llega a diez misiones. Se mantienen los cinco diseños iniciales, el movimiento por casillas, la vista ampliada y las reglas distintas de solo y dúo. La expansión añade objetivos y encuentros mediante geometrías, patrullas y paletas propias.
+El objetivo de todas las misiones es capturar la bandera y regresar a la entrada. La dificultad crece introduciendo una mecánica cada vez, acortando gradualmente las ventanas de reacción y combinando rutas y enemigos conocidos. Se conservan diez mapas, movimiento cardinal por casillas, vista completa, herramientas y progreso guardado.
 
-## Decisiones
+## Progresión de la campaña
 
-| Cambio                                                      | Resultado buscado                                                            |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Proyección rectangular con casillas cuadradas               | Arriba/abajo/izquierda/derecha coinciden con los ejes de la pantalla         |
-| Un paso cardinal por orden; repetición al mantener la tecla | Saber dónde terminará cada movimiento                                        |
-| Última dirección pulsada y un giro pendiente                | Responder con rapidez sin cortar esquinas ni generar diagonales              |
-| Impulso de exactamente una casilla                          | Una esquiva corta y predecible, con recarga                                  |
-| Enemigos y liana sujetos a los mismos pasos                 | Evitar que una embestida o un rescate introduzcan desplazamientos diagonales |
-| Avisos de ataque por casillas                               | Mostrar con precisión qué cuadros son peligrosos                             |
-| Mapas de 28 × 20                                            | Ampliar salas, pasillos y cruces, conservando la identidad de cada diseño    |
+| Misión                          | Aprendizaje o desafío                                | Runas | Guardianes solo / dúo | Velocidad base |
+| ------------------------------- | ---------------------------------------------------- | ----- | --------------------- | -------------- |
+| 1 · La Primera Bandera          | Caminar, esquivar centinelas y volver; bandera libre | 0     | 1 / 2                 | 32             |
+| 2 · Los Puentes del Río         | Activar una runa y elegir el cruce                   | 1     | 2 / 3                 | 36             |
+| 3 · El Jardín de las Estatuas   | Primera embestida del jaguar                         | 2     | 3 / 4                 | 40             |
+| 4 · Las Ruinas de la Luna       | Primer pulso del espíritu                            | 2     | 3 / 4                 | 44             |
+| 5 · El Santuario del Sol        | Primeras trampas de suelo, con aviso                 | 3     | 4 / 5                 | 47             |
+| 6 · El Pantano de la Niebla     | Estatua, luz y liana para abrir dos cruces           | 3     | 5 / 6                 | 50             |
+| 7 · Las Canteras del Ámbar      | Primer gran golpe del Guardián Solar                 | 3     | 6 / 7                 | 53             |
+| 8 · La Laguna de Cristal        | Combinar enemigos conocidos y cruces alternativos    | 4     | 6 / 7                 | 56             |
+| 9 · La Fortaleza de las Espinas | Accesos vigilados y refugios entre patrullas         | 4     | 7 / 8                 | 59             |
+| 10 · El Corazón de la Selva     | Cuatro salidas y dos Guardianes Solares              | 4     | 8 / 9                 | 62             |
 
-La expansión añade filas y columnas a los diseños existentes y convierte objetivos, patrullas, arbustos y puentes a sus nuevas posiciones. No se estira la imagen: la lógica contiene 560 casillas reales, frente a 252. Se ve el mapa completo, sin una cámara que separe al dúo.
+El mecanismo del antiguo primer nivel pasa a la misión 6. Los dos puentes del río superior del pantano se cierran hasta resolverlo; la estatua, el mecanismo y el jaguar necesario están en la zona accesible. Al abrirlos se puede terminar la activación de runas y capturar la bandera. La primera misión tiene un centinela cerca de la bandera; en dúo se añade una patrulla en la aproximación.
 
-## Parámetros
+## Dos momentos por misión
 
-- Movimiento: una casilla cada 0,25 s; burbuja cada 0,5 s. Portador: velocidad ×0,93 solo o ×0,78 dúo, que aumenta la espera entre casillas sin alterar su longitud. Impulso: una casilla en unos 0,117 s, con 3,5 s de recarga.
-- Solo: tres corazones; cada golpe otorga 1,7 s de protección. Campamento: dos segundos continuos para recuperar corazones, únicamente antes de la alarma. Los golpes acumulados siguen contando para las estrellas.
-- Solo: un guardián menos, velocidad de patrulla ×0,92 y preparación de ataque ×1,15. No se elimina al Solar final.
-- Linterna: radio 2,3 casillas, recarga 5 s, interrupción 0,7 s. Marca de combo: 6 s solo / 4 s dúo.
-- Liana: alcance 3 casillas, recarga 4,5 s, interrupción 0,6 s o inmovilización 2,2 s si hay marca de luz. Un lanzamiento sin objetivo válido no gasta recarga.
-- Pase: alcance 4 casillas, espera entre pases 0,8 s, protección del receptor 0,45 s. El cambio de portador es inmediato; la animación dura 0,35 s. Agua permitida; muros bloquean.
-- Rescate: 0,6 s de proximidad; protección 1,5 s para el rescatado y 0,8 s para el rescatador. La liana acerca la burbuja hasta una casilla adyacente, mediante pasos cardinales por suelo transitable. El rescate ya funciona desde la casilla vecina.
-- Estatua: impacto de la trayectoria de salto a hasta 0,65 casillas. Recuperación del jaguar 2,5 s. El mecanismo permanece iluminado 8 s solo / 4 s dúo. Abrirlo mantiene disponibles ambos cruces hasta reiniciar.
-- Resto de encuentros: runas 0,65 s; territorio de guardián hasta 4,5 casillas de su ruta; ataques próximos por turnos. Trampas con ciclo de 6,5 s, aviso de 1,3 s y frenado de 1,1 s.
+La ida permite observar patrullas y elegir cómo liberar la bandera. Tomarla activa la música de alarma, cierra la curación del campamento y muestra una cuenta en el HUD. La cuenta baja de 2,4 a 1,5 s entre misiones; solo recibe 0,4 s adicionales.
 
-Se mantienen los puntos por completar, tesoros y tiempo. Se descuentan 35 por golpe/captura y 200 por intento compartido perdido. Pases, combos y rescates no generan puntos repetibles. Estrellas sin límite de tiempo: completar, tres tesoros y expedición limpia. Solo admite hasta un golpe; dúo hasta dos capturas, sin perder un intento.
+Al terminar la cuenta, cada guardián sigue una ruta que incluye un cruce elegido en el diseño del mapa. Se desplaza físicamente hasta allí. El cambio conserva pasos en curso, aturdimientos y ataques anunciados. Los puntos se reparten por el terreno y quedan fuera de la entrada; ninguna puerta se cierra durante la huida. Los guardianes siguen necesitando visión y respetan arbustos y territorio. La alarma continúa tras un pase o una bandera caída y se restablece al reintentar.
 
-## Ataques legibles
+`src/difficulty.js` concentra la curva y los puntos de vigilancia; `map.js` los convierte a la cuadrícula de 28 × 20. Todas las rutas de alarma se verifican como transitables después de abrir los mecanismos necesarios.
 
-El centinela avisa una cruz de una casilla de alcance. El espíritu señala un área de hasta dos pasos cardinales. El Solar señala un cuadrado de hasta 5 × 5. Muros y línea de visión recortan esas zonas. El jaguar se alinea con el jugador antes de avisar y avanza hasta tres casillas cardinales, deteniéndose ante agua o muros. La zona fijada durante el aviso no cambia al moverse el jugador.
+## Ventanas y modalidades
 
-Las posiciones de juego siempre están en centros de casilla. La animación interpola visualmente el paso entre centros; el destino es la casilla lógica ocupada desde que empieza el paso. Las pruebas verifican que cada cambio sea como máximo un vecino cardinal. Pausar congela también esa transición visual.
+- Jugadores: una casilla cada 0,25 s; portador ×0,93 solo / ×0,78 dúo. Impulso: una casilla en unos 0,117 s, con 3,5 s de recarga.
+- Avisos: duración base del enemigo ×1,50 en la misión 1, hasta ×1,05 en la 10; disminuye 0,05 por misión. En solo se multiplica además por 1,25. El centinela inicial avisa 1,275 s en dúo y unos 1,59 s en solo.
+- Recuperación: duración base ×1,30 al principio, hasta ×1,03 al final; solo recibe otro ×1,10. Los primeros encuentros dejan más tiempo para cruzar o usar herramientas.
+- Solo: un guardián menos, patrulla ×0,92, tres corazones, protección tras daño y acceso a ambas herramientas. Los primeros niveles se completan usando solo movimiento y esquiva.
+- Dúo: linterna azul y liana roja, tres intentos compartidos, captura en burbuja, rescate y pase. El portador avanza más despacio; el compañero puede distraer o interrumpir guardias para abrir camino.
+- Detección: 2,7 a 4,95 casillas; búsqueda: 1,4 a 3,2 s. Tras la cuenta de alarma se añaden 0,2 a 0,65 casillas de detección y persecución ×1,02 a ×1,11.
+- El jaguar final alcanza 78,81 unidades/s en persecución con alarma; el portador en dúo camina a 87,36. La dificultad conserva margen de huida.
+- Los ataques próximos se turnan: separación de 4 casillas en las primeras cuatro misiones y 3 en las siguientes. Las casillas de daño quedan fijadas durante el aviso.
 
-## Recorridos automatizados
+## Herramientas y reglas conservadas
 
-`tests/journey.js` dirige las entradas de movimiento y herramientas, con guardianes, daño, colisiones y recargas reales. No teletransporta, elimina enemigos ni concede invulnerabilidad. Completa los diez mapas en ambos modos, con y sin todos los tesoros. La estatua se carga mediante un salto real del jaguar.
+La luz marca guardianes durante 6 s solo / 4 s dúo y los interrumpe 0,7 s. La liana inmoviliza 2,2 s a un guardián marcado y también permite rescatar y recoger objetos. El mecanismo del puente admite luz durante 8 s solo / 4 s dúo. Su estatua se carga mediante una embestida real y permanece cargada durante ese intento.
 
-Los resultados detallados se generan en `test-results/balance-v5.2.json`. Estas simulaciones reaccionan inmediatamente a avisos y no representan tiempos ni dificultad de personas. Sirven para detectar bloqueos y regresiones; la diversión requiere jugar.
+El pase alcanza cuatro casillas con línea libre de muros, tiene 0,8 s de espera y da 0,45 s de protección al receptor. El rescate requiere 0,6 s junto al compañero. Los ataques, las herramientas y el movimiento respetan paredes y agua; los avisos corresponden a las casillas que realmente golpean.
 
-## Correcciones durante el cambio
+Las estrellas premian completar, reunir los tres tesoros y una expedición limpia. No hay límite de tiempo. El tiempo afecta solo a parte de la puntuación. Reintentar restaura la misión y conserva los desbloqueos y récords guardados.
 
-- El jaguar ya no inicia ataques desde una diagonal que no pueda alcanzar al jugador.
-- La liana completa el recorrido hasta la casilla adyacente; inicialmente podía detenerse un cuadro antes y dejar el rescate fuera de alcance.
-- Un toque breve no se pierde entre cuadros de animación; solo se conserva una dirección pendiente.
-- Dos teclas no producen diagonales ni más velocidad.
-- Los cuadros anunciados de un ataque y la comprobación de daño usan la misma lista.
-- Los desbloqueos de v3/v4 se conservan sin mezclar puntuaciones de los mapas anteriores con los ampliados.
+## Verificación y siguiente prueba humana
 
-## Segundo capítulo: misiones 6–10
+Las pruebas recorren diez misiones × dos modos × con/sin tesoros, con guardianes activos, además de las dos primeras misiones sin habilidades. Comprueban orientación, colisiones, progresión, avisos, rutas de alarma, pausa, pérdida y recuperación de bandera y restauración de la misión 6. Las simulaciones reaccionan inmediatamente y no representan la dificultad percibida por un niño.
 
-| Misión                   | Estructura                                    | Runas | Guardianes solo / dúo | Velocidad base |
-| ------------------------ | --------------------------------------------- | ----- | --------------------- | -------------- |
-| Pantano de la Niebla     | Tres orillas y cruces alternativos            | 3     | 5 / 6                 | 56             |
-| Canteras del Ámbar       | Pasillos escalonados que cortan la visión     | 3     | 6 / 7                 | 58             |
-| Laguna de Cristal        | Islas y canales con pasos alternativos        | 4     | 6 / 7                 | 60             |
-| Fortaleza de las Espinas | Runas exteriores y patio protegido            | 4     | 7 / 8                 | 62             |
-| Corazón de la Selva      | Isla central con cuatro accesos y dos Solares | 4     | 8 / 9                 | 64             |
-
-Los campos de detección aumentan de 4,6 a 5 casillas y la búsqueda de 3,1 a 3,5 s. Los avisos y la recuperación de los ataques conservan sus duraciones. El jaguar más rápido sigue siendo más lento que el jugador, incluso durante la alarma. Las trampas se desfasan para permitir esperar o cambiar de cruce. Los arbustos ofrecen refugios entre territorios; todos los objetivos, tesoros y patrullas son alcanzables.
-
-La simulación de aceptación ahora mantiene al acompañante a una casilla y evita entrar en cuadros con un aviso visible. Utiliza únicamente entradas normales, sin cambiar posiciones, enemigos ni protección. Los cuarenta recorridos (10 mapas × 2 modos × con/sin todos los tesoros) terminan. Reaccionar sin demora hace que estos recorridos sean más eficaces que una partida humana; no mide la dificultad percibida.
-
-## Prueba con David y Tavito
-
-Comparar la elección de cruces en el pantano y la laguna, la utilidad de los muros en las canteras, y la presión de las patrullas en la fortaleza y el corazón. La progresión conserva margen de esquiva y aumenta encuentros y objetivos. El siguiente ajuste debe salir de sus partidas: qué rutas usan, dónde se sienten atrapados y cómo coordinan las dos herramientas.
+Al jugar con Tavito, observar especialmente si entiende el objetivo inicial, reconoce el primer aviso del jaguar y cambia de ruta al sonar la alarma. En dúo, comprobar si pasan la bandera y usan al compañero para abrir camino. Esa prueba permitirá ajustar tiempos y encuentros sobre la progresión ya implementada.
